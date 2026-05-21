@@ -5,9 +5,6 @@
 Min-Tube-Proの独自派生です
 
 ### デモ
-- https://min-tube2.vercel.app
-Study2525やKTubeのサーバーをMintubeに使用して高速化して
-Wista しあTube EARTHPRoxy NautilusOS ANIMEProxy CodeEditを削除
 
 
 ## デプロイ
