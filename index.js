@@ -1458,7 +1458,15 @@ app.get("/check", (req, res) => {
 });
 
 app.get("/use-api", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "app/sorry.html"));
+  res.sendFile(path.join(__dirname, "public", "app/api-portal.html"));
+});
+
+app.get("/api-portal", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "app/api-portal.html"));
+});
+
+app.get("/api/docs", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "app/api-portal.html"));
 });
 
 app.get("/version", (req, res) => {
