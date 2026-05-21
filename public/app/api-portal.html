@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>API Portal | MIN-Tube-Pro</title>
+  <meta name="description" content="MIN-Tube-Pro が提供する API の一覧・仕様・サンプル・ライブテスト機能を備えた公式ポータル。" />
+  <meta name="theme-color" content="#0f0f0f" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* ===== Design tokens (matched with home.html YouTube-style) ===== */
+    :root{
+      --bg:#0f0f0f;
+      --surface:#181818;
+      --surface-2:#212121;
+      --card:#272727;
+      --card-hover:#2f2f2f;
+      --text:#f1f1f1;
+      --text-muted:#aaaaaa;
+      --text-secondary:#717171;
+      --border:#3f3f3f;
+      --border-soft:#2a2a2a;
+      --accent:#3ea6ff;      /* YouTube link blue */
+      --accent-soft:rgba(62,166,255,.14);
+      --success:#22c55e;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+      --header-h:56px;
+      --radius:14px;
+      --radius-sm:10px;
+      --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    }
+    body.light-mode{
+      --bg:#ffffff;
+      --surface:#f7f7f7;
+      --surface-2:#f2f2f2;
+      --card:#ffffff;
+      --card-hover:#f2f2f2;
+      --text:#0f0f0f;
+      --text-muted:#606060;
+      --text-secondary:#909090;
+      --border:#e0e0e0;
+      --border-soft:#ececec;
+      --accent:#1a73e8;
+      --accent-soft:rgba(26,115,232,.10);
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      background:var(--bg);
+      color:var(--text);
+      font-family:'Roboto',Arial,"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      overflow-x:hidden;
+    }
+    a{color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    button{font-family:inherit}
+
+    /* ===== Header ===== */
+    header{
+      position:sticky;top:0;left:0;right:0;
+      height:var(--header-h);
+      background:var(--bg);
+      display:flex;align-items:center;gap:12px;
+      padding:0 16px;
+      z-index:50;
+      border-bottom:1px solid var(--border-soft);
+    }
+    .brand{display:flex;align-items:center;gap:10px;color:var(--text);font-weight:700;letter-spacing:-.5px}
+    .brand .logo-dot{
+      width:30px;height:22px;border-radius:6px;background:#ff0033;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .brand .logo-dot svg{width:14px;height:14px;fill:#fff}
+    .brand .title{font-size:17px}
+    .brand .sub{font-size:11px;color:var(--text-muted);font-weight:500;align-self:flex-end;margin-bottom:3px}
+    .header-spacer{flex:1}
+    .header-actions{display:flex;gap:6px;align-items:center}
+    .icon-btn{
+      background:transparent;border:none;color:var(--text);
+      width:38px;height:38px;border-radius:50%;
+      display:inline-flex;align-items:center;justify-content:center;
+      cursor:pointer;transition:background .12s ease;
+    }
+    .icon-btn:hover{background:rgba(255,255,255,.10)}
+    body.light-mode .icon-btn:hover{background:rgba(0,0,0,.06)}
+    .icon-btn svg{width:22px;height:22px;fill:currentColor}
+
+    /* ===== Hero ===== */
+    .hero{
+      max-width:1240px;margin:0 auto;padding:36px 24px 8px;
+      display:grid;grid-template-columns:1.4fr 1fr;gap:28px;align-items:center;
+    }
+    .hero-inner h1{
+      font-size:clamp(28px,4.2vw,42px);
+      line-height:1.15;letter-spacing:-.02em;font-weight:700;margin-bottom:14px;
+    }
+    .hero-inner h1 .grad{
+      background:linear-gradient(90deg,#3ea6ff,#a78bfa,#22d3ee);
+      -webkit-background-clip:text;background-clip:text;color:transparent;
+    }
+    .hero-inner p{color:var(--text-muted);font-size:16px;line-height:1.6;max-width:60ch}
+    .hero-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+    .pill{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:6px 12px;border-radius:999px;
+      background:var(--surface-2);color:var(--text);font-size:12px;
+      border:1px solid var(--border-soft);
+    }
+    .pill .dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 0 4px rgba(34,197,94,.18)}
+    .pill.warn .dot{background:var(--warn);box-shadow:0 0 0 4px rgba(245,158,11,.18)}
+    .pill.danger .dot{background:var(--danger);box-shadow:0 0 0 4px rgba(239,68,68,.18)}
+
+    .hero-card{
+      background:linear-gradient(160deg,rgba(62,166,255,.10),rgba(167,139,250,.08) 60%,transparent);
+      border:1px solid var(--border-soft);
+      border-radius:var(--radius);
+      padding:18px;
+      backdrop-filter:blur(6px);
+    }
+    .hero-card .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .hero-card .label{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+    .hero-card .base{
+      font-family:var(--mono);font-size:14px;color:var(--text);
+      background:var(--surface-2);border:1px solid var(--border-soft);
+      padding:10px 12px;border-radius:var(--radius-sm);
+      display:flex;align-items:center;justify-content:space-between;gap:10px;word-break:break-all;
+    }
+    .copy-btn{
+      background:var(--accent);color:#fff;border:none;
+      padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;
+      transition:filter .12s;
+    }
+    .copy-btn:hover{filter:brightness(1.1)}
+    .copy-btn.copied{background:var(--success)}
+
+    /* ===== Stats grid ===== */
+    .stats{
+      max-width:1240px;margin:18px auto 0;padding:0 24px;
+      display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+    }
+    .stat{
+      background:var(--surface);border:1px solid var(--border-soft);
+      border-radius:var(--radius-sm);padding:14px 16px;
+    }
+    .stat .val{font-size:22px;font-weight:700;letter-spacing:-.02em}
+    .stat .lbl{font-size:12px;color:var(--text-muted);margin-top:2px}
+
+    /* ===== Toolbar ===== */
+    .toolbar{
+      max-width:1240px;margin:28px auto 12px;padding:0 24px;
+      display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    }
+    .search-box{
+      flex:1;min-width:220px;display:flex;align-items:center;gap:8px;
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:999px;padding:8px 14px;
+    }
+    .search-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+    .search-box svg{width:18px;height:18px;fill:var(--text-muted);flex-shrink:0}
+    .search-box input{
+      flex:1;background:transparent;border:none;outline:none;color:var(--text);
+      font-size:14px;font-family:inherit;
+    }
+    .filters{display:flex;flex-wrap:wrap;gap:6px}
+    .chip{
+      background:var(--surface-2);color:var(--text);
+      border:1px solid var(--border-soft);
+      padding:7px 14px;border-radius:999px;font-size:13px;
+      cursor:pointer;white-space:nowrap;
+      transition:background .12s,color .12s;
+    }
+    .chip:hover{background:var(--card-hover)}
+    .chip.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+
+    /* ===== Endpoints ===== */
+    .endpoints{
+      max-width:1240px;margin:12px auto 60px;padding:0 24px;
+      display:grid;grid-template-columns:1fr;gap:14px;
+    }
+    .card{
+      background:var(--surface);border:1px solid var(--border-soft);
+      border-radius:var(--radius);
+      overflow:hidden;transition:border-color .15s,transform .15s;
+    }
+    .card:hover{border-color:var(--border)}
+    .card-head{
+      display:flex;align-items:center;gap:10px;padding:14px 18px;cursor:pointer;
+      user-select:none;flex-wrap:wrap;
+    }
+    .method{
+      font-family:var(--mono);font-weight:600;font-size:11px;letter-spacing:.06em;
+      padding:4px 8px;border-radius:6px;color:#fff;flex-shrink:0;
+    }
+    .method.GET{background:#16a34a}
+    .method.POST{background:#2563eb}
+    .method.PUT{background:#d97706}
+    .method.DELETE{background:#dc2626}
+    .path{font-family:var(--mono);font-size:14px;color:var(--text);flex:1;min-width:0;word-break:break-all}
+    .desc{font-size:13px;color:var(--text-muted);width:100%;margin-top:2px;line-height:1.5}
+    .badge{
+      font-size:10px;padding:2px 8px;border-radius:999px;
+      background:var(--accent-soft);color:var(--accent);
+      font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+    }
+    .badge.beta{background:rgba(245,158,11,.14);color:#f59e0b}
+    .badge.stable{background:rgba(34,197,94,.14);color:#22c55e}
+    .chev{
+      margin-left:auto;transition:transform .2s;color:var(--text-muted);
+    }
+    .card.open .chev{transform:rotate(180deg)}
+    .card-body{
+      max-height:0;overflow:hidden;transition:max-height .25s ease;
+      border-top:1px solid var(--border-soft);
+    }
+    .card.open .card-body{max-height:2400px}
+    .card-body-inner{padding:16px 18px;display:grid;gap:14px}
+
+    .section-label{
+      font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--text-muted);margin-bottom:6px;font-weight:600;
+    }
+    table.params{width:100%;border-collapse:collapse;font-size:13px}
+    table.params th,table.params td{
+      text-align:left;padding:8px 10px;border-bottom:1px solid var(--border-soft);
+      vertical-align:top;
+    }
+    table.params th{color:var(--text-muted);font-weight:500;font-size:12px}
+    table.params td code{font-family:var(--mono);font-size:12px;color:var(--accent)}
+    .req{color:var(--danger);font-weight:700;margin-left:4px}
+
+    .codeblock{
+      background:var(--surface-2);border:1px solid var(--border-soft);
+      border-radius:var(--radius-sm);padding:12px 14px;
+      font-family:var(--mono);font-size:12.5px;line-height:1.55;
+      color:var(--text);white-space:pre-wrap;word-break:break-word;
+      position:relative;overflow:auto;max-height:420px;
+    }
+    .codeblock .mini-copy{
+      position:absolute;top:8px;right:8px;
+      background:var(--card);color:var(--text);border:1px solid var(--border);
+      padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;
+    }
+    .codeblock .mini-copy:hover{background:var(--card-hover)}
+
+    .tryit{
+      display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
+    }
+    .tryit input{
+      background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+      padding:9px 12px;border-radius:8px;font-family:var(--mono);font-size:13px;outline:none;
+      width:100%;
+    }
+    .tryit input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+    .run-btn{
+      background:var(--accent);color:#fff;border:none;
+      padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;
+      display:inline-flex;align-items:center;gap:6px;transition:filter .12s;
+    }
+    .run-btn:hover{filter:brightness(1.1)}
+    .run-btn:disabled{opacity:.6;cursor:not-allowed}
+    .response{display:none}
+    .response.show{display:block}
+    .response-meta{
+      display:flex;gap:10px;align-items:center;margin-bottom:6px;
+      font-size:12px;color:var(--text-muted);
+    }
+    .status-pill{
+      font-family:var(--mono);font-weight:600;font-size:11px;
+      padding:2px 8px;border-radius:6px;color:#fff;
+    }
+    .status-pill.s2{background:var(--success)}
+    .status-pill.s3{background:var(--accent)}
+    .status-pill.s4{background:var(--warn)}
+    .status-pill.s5{background:var(--danger)}
+
+    /* ===== Footer ===== */
+    footer{
+      max-width:1240px;margin:0 auto;padding:40px 24px;
+      color:var(--text-muted);font-size:13px;border-top:1px solid var(--border-soft);
+      display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width:980px){
+      .hero{grid-template-columns:1fr;padding-top:24px}
+      .stats{grid-template-columns:repeat(2,1fr)}
+      .tryit{grid-template-columns:1fr}
+    }
+    @media (max-width:560px){
+      .stats{grid-template-columns:1fr 1fr}
+      .brand .sub{display:none}
+      .hero{padding:18px 16px 0}
+      .toolbar,.endpoints,footer{padding-left:16px;padding-right:16px}
+    }
+
+    /* ===== Toast ===== */
+    .toast{
+      position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+      background:var(--text);color:var(--bg);
+      padding:10px 18px;border-radius:999px;font-size:13px;font-weight:500;
+      opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+      z-index:1000;
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    /* ===== Empty state ===== */
+    .empty{
+      text-align:center;padding:60px 20px;color:var(--text-muted);
+    }
+    .empty svg{width:48px;height:48px;opacity:.4;margin-bottom:12px}
+
+    /* spinner */
+    .spinner{
+      width:14px;height:14px;border:2px solid rgba(255,255,255,.4);
+      border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:inline-block;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" class="brand" aria-label="ホームへ戻る">
+      <span class="logo-dot">
+        <svg viewBox="0 0 24 24"><path d="M10 16.5l6-4.5-6-4.5z"/></svg>
+      </span>
+      <span class="title">MIN-Tube-Pro</span>
+      <span class="sub">API</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-actions">
+      <button class="icon-btn" id="themeToggle" title="テーマ切替" aria-label="テーマ切替">
+        <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.5 5.5 0 0 1-7.54-7.54C13.92 3.04 13.46 3 13 3z"/></svg>
+      </button>
+      <a class="icon-btn" href="/" title="ホームに戻る" aria-label="ホームに戻る">
+        <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>MIN-Tube-Pro <span class="grad">API Portal</span></h1>
+      <p>MIN-Tube-Pro が提供するパブリック API の一覧、仕様、サンプル、そしてブラウザ上での<strong>ライブテスト機能</strong>を備えた公式ポータルです。認証は不要、すぐに使い始められます。</p>
+      <div class="hero-meta">
+        <span class="pill"><span class="dot"></span>ステータス: 稼働中</span>
+        <span class="pill">バージョン v1.4.7</span>
+        <span class="pill">レート制限: 60req / min (目安)</span>
+        <span class="pill">CORS: 同一オリジン</span>
+      </div>
+    </div>
+    <div class="hero-card">
+      <div class="row">
+        <span class="label">Base URL</span>
+        <span class="pill"><span class="dot"></span>Live</span>
+      </div>
+      <div class="base">
+        <span id="baseUrl">—</span>
+        <button class="copy-btn" id="copyBaseBtn">コピー</button>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text-muted);line-height:1.55">
+        すべての API は <code style="font-family:var(--mono);color:var(--accent)">JSON</code> 形式でレスポンスを返します。下のエンドポイント一覧から「試す」を押せば、その場で実行して結果を確認できます。
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="stats" aria-label="統計">
+    <div class="stat"><div class="val" id="stat-total">0</div><div class="lbl">公開エンドポイント</div></div>
+    <div class="stat"><div class="val" id="stat-get">0</div><div class="lbl">GET メソッド</div></div>
+    <div class="stat"><div class="val" id="stat-post">0</div><div class="lbl">POST メソッド</div></div>
+    <div class="stat"><div class="val">JSON</div><div class="lbl">レスポンス形式</div></div>
+  </section>
+
+  <!-- TOOLBAR -->
+  <section class="toolbar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19zM10 14a4 4 0 1 1 0-8 4 4 0 0 1 0 8"/></svg>
+      <input type="text" id="searchInput" placeholder="エンドポイント名・パス・説明を検索 (例: search, channel)" autocomplete="off">
+    </div>
+    <div class="filters" id="filters">
+      <button class="chip active" data-filter="all">すべて</button>
+      <button class="chip" data-filter="GET">GET</button>
+      <button class="chip" data-filter="POST">POST</button>
+      <button class="chip" data-filter="video">動画</button>
+      <button class="chip" data-filter="search">検索</button>
+      <button class="chip" data-filter="channel">チャンネル</button>
+    </div>
+  </section>
+
+  <!-- ENDPOINTS -->
+  <main class="endpoints" id="endpointsList" aria-live="polite"></main>
+
+  <footer>
+    <div>© 2026 <a href="https://github.com/mino-hobby-pro">mino-hobby-pro</a> · MIN-Tube-Pro API Portal</div>
+    <div>
+      <a href="/update">更新情報</a> ·
+      <a href="/">ホーム</a> ·
+      <a href="https://github.com/mino-hobby-pro/MIN-Tube-Pro" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    /* =================================================================
+       API カタログ定義
+       index.js 内で公開されているルートを基にエンドポイントを定義
+       ================================================================= */
+    const ORIGIN = window.location.origin;
+    const ENDPOINTS = [
+      {
+        method:"GET",
+        path:"/api/trending",
+        title:"急上昇動画一覧",
+        desc:"急上昇キーワードに基づくおすすめ動画リストを取得します。ホーム画面の初期表示に利用しています。",
+        tags:["video","home"],
+        status:"stable",
+        params:[
+          {name:"page",type:"number",req:false,desc:"ページ番号 (デフォルト: 0)"}
+        ],
+        sample:"/api/trending?page=0"
+      },
+      {
+        method:"GET",
+        path:"/api/search",
+        title:"動画検索",
+        desc:"キーワードで YouTube 動画を検索し、メタデータを含めた一覧を返します。",
+        tags:["video","search"],
+        status:"stable",
+        params:[
+          {name:"q",type:"string",req:true,desc:"検索キーワード"},
+          {name:"page",type:"number",req:false,desc:"ページ番号 (デフォルト: 0)"}
+        ],
+        sample:"/api/search?q=lofi&page=0"
+      },
+      {
+        method:"GET",
+        path:"/api/recommendations",
+        title:"おすすめ動画",
+        desc:"視聴履歴やチャンネル情報を元にしたおすすめ動画を返します。",
+        tags:["video","home"],
+        status:"stable",
+        params:[
+          {name:"channels",type:"string[]",req:false,desc:"カンマ区切りの関連チャンネル名"},
+          {name:"keywords",type:"string[]",req:false,desc:"関連キーワード (カンマ区切り)"}
+        ],
+        sample:"/api/recommendations?channels=YOASOBI&keywords=music"
+      },
+      {
+        method:"GET",
+        path:"/api/channel",
+        title:"チャンネル情報・動画一覧",
+        desc:"指定チャンネル名で関連動画を取得します。",
+        tags:["channel"],
+        status:"stable",
+        params:[
+          {name:"name",type:"string",req:true,desc:"チャンネル名 (またはクエリ)"},
+          {name:"page",type:"number",req:false,desc:"ページ番号"}
+        ],
+        sample:"/api/channel?name=YOASOBI&page=0"
+      },
+      {
+        method:"GET",
+        path:"/api/inv/channel/:name",
+        title:"Invidious チャンネル検索",
+        desc:"Invidious API 経由でチャンネルを検索し、結果を返します。",
+        tags:["channel","external"],
+        status:"beta",
+        params:[
+          {name:"name",type:"string",req:true,desc:"URL パスに含めるチャンネル名"}
+        ],
+        sample:"/api/inv/channel/YOASOBI"
+      },
+      {
+        method:"POST",
+        path:"/api/save-history",
+        title:"視聴履歴の保存",
+        desc:"クライアントから視聴履歴を送信するエンドポイントです。Body は JSON。",
+        tags:["history"],
+        status:"stable",
+        params:[
+          {name:"videoId",type:"string",req:true,desc:"動画 ID (リクエストボディ)"},
+          {name:"title",type:"string",req:false,desc:"動画タイトル"}
+        ],
+        sample:"/api/save-history"
+      },
+      {
+        method:"GET",
+        path:"/video/:id",
+        title:"動画詳細ページ",
+        desc:"指定された動画 ID の埋め込み・メタデータを含む HTML を返します。直接ブラウザからアクセスして視聴できます。",
+        tags:["video","page"],
+        status:"stable",
+        params:[
+          {name:"id",type:"string",req:true,desc:"動画 ID (URL パス)"}
+        ],
+        sample:"/video/dQw4w9WgXcQ"
+      },
+      {
+        method:"GET",
+        path:"/img/:videoId",
+        title:"サムネイル取得 (プロキシ)",
+        desc:"YouTube サムネイル画像をプロキシ経由で取得します。CORS / 検閲環境下で便利です。",
+        tags:["video","image"],
+        status:"stable",
+        params:[
+          {name:"videoId",type:"string",req:true,desc:"動画 ID"}
+        ],
+        sample:"/img/dQw4w9WgXcQ"
+      },
+      {
+        method:"GET",
+        path:"/rapid/:id",
+        title:"RapidAPI 経由のストリーム",
+        desc:"バックアップとして RapidAPI 経由で動画ストリーム情報を取得します。",
+        tags:["video","external"],
+        status:"beta",
+        params:[
+          {name:"id",type:"string",req:true,desc:"動画 ID"}
+        ],
+        sample:"/rapid/dQw4w9WgXcQ"
+      },
+      {
+        method:"GET",
+        path:"/360/:videoId",
+        title:"360p 動画 URL 取得",
+        desc:"動画 ID に対応する 360p 直リンクを返します (60 秒キャッシュ)。",
+        tags:["video"],
+        status:"stable",
+        params:[
+          {name:"videoId",type:"string",req:true,desc:"動画 ID"}
+        ],
+        sample:"/360/dQw4w9WgXcQ"
+      },
+      {
+        method:"GET",
+        path:"/stream/inv/:videoId",
+        title:"Invidious ストリーム",
+        desc:"Invidious ネットワーク経由でストリーム情報を取得します。",
+        tags:["video","external"],
+        status:"beta",
+        params:[
+          {name:"videoId",type:"string",req:true,desc:"動画 ID"}
+        ],
+        sample:"/stream/inv/dQw4w9WgXcQ"
+      },
+      {
+        method:"GET",
+        path:"/sia-dl/:videoId",
+        title:"Siawaseok ダウンロード",
+        desc:"siawaseok 様の API を経由してダウンロードリンクを取得します。",
+        tags:["video","external"],
+        status:"beta",
+        params:[
+          {name:"videoId",type:"string",req:true,desc:"動画 ID"}
+        ],
+        sample:"/sia-dl/dQw4w9WgXcQ"
+      },
+      {
+        method:"GET",
+        path:"/ai-fetch/:videoId",
+        title:"AI フェッチ (メタデータ)",
+        desc:"動画 ID からタイトル・チャンネル情報・サムネイルなどのメタデータをまとめて取得します。",
+        tags:["video","ai"],
+        status:"beta",
+        params:[
+          {name:"videoId",type:"string",req:true,desc:"動画 ID"}
+        ],
+        sample:"/ai-fetch/dQw4w9WgXcQ"
+      },
+      {
+        method:"GET",
+        path:"/version",
+        title:"バージョン情報",
+        desc:"現在の MIN-Tube-Pro のバージョン JSON を返します。",
+        tags:["meta"],
+        status:"stable",
+        params:[],
+        sample:"/version"
+      },
+      {
+        method:"GET",
+        path:"/games.json",
+        title:"ゲーム一覧",
+        desc:"内蔵ゲーム一覧の JSON データを返します。",
+        tags:["meta","game"],
+        status:"stable",
+        params:[],
+        sample:"/games.json"
+      }
+    ];
+
+    /* =================================================================
+       Render
+       ================================================================= */
+    const listEl  = document.getElementById('endpointsList');
+    const searchInput = document.getElementById('searchInput');
+    const filtersEl = document.getElementById('filters');
+    const toast = document.getElementById('toast');
+    document.getElementById('baseUrl').textContent = ORIGIN;
+
+    function showToast(msg){
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(()=>toast.classList.remove('show'), 1600);
+    }
+    function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+
+    function paramsToTable(params){
+      if(!params || !params.length){
+        return `<div style="font-size:13px;color:var(--text-muted)">パラメータはありません。</div>`;
+      }
+      return `<table class="params">
+        <thead><tr><th>名前</th><th>型</th><th>必須</th><th>説明</th></tr></thead>
+        <tbody>${params.map(p=>`
+          <tr>
+            <td><code>${escapeHtml(p.name)}</code></td>
+            <td style="color:var(--text-muted);font-family:var(--mono);font-size:12px">${escapeHtml(p.type)}</td>
+            <td>${p.req?'<span class="req">必須</span>':'<span style="color:var(--text-muted)">任意</span>'}</td>
+            <td style="color:var(--text-secondary)">${escapeHtml(p.desc||'')}</td>
+          </tr>`).join('')}
+        </tbody></table>`;
+    }
+
+    function curlSample(ep){
+      const url = ORIGIN + ep.sample;
+      if(ep.method === 'POST'){
+        return `curl -X POST '${url}' \\\n  -H 'Content-Type: application/json' \\\n  -d '{"videoId":"dQw4w9WgXcQ"}'`;
+      }
+      return `curl '${url}'`;
+    }
+    function jsSample(ep){
+      const url = ep.sample;
+      if(ep.method === 'POST'){
+        return `const res = await fetch('${url}', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json' },\n  body: JSON.stringify({ videoId: 'dQw4w9WgXcQ' })\n});\nconst data = await res.json();\nconsole.log(data);`;
+      }
+      return `const res = await fetch('${url}');\nconst data = await res.json();\nconsole.log(data);`;
+    }
+
+    function cardHtml(ep, idx){
+      return `
+        <article class="card" data-method="${ep.method}" data-tags="${ep.tags.join(',')}" data-key="${idx}">
+          <header class="card-head" data-toggle>
+            <span class="method ${ep.method}">${ep.method}</span>
+            <span class="path">${escapeHtml(ep.path)}</span>
+            <span class="badge ${ep.status==='beta'?'beta':'stable'}">${ep.status}</span>
+            <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+            <div class="desc">${escapeHtml(ep.desc)}</div>
+          </header>
+          <div class="card-body">
+            <div class="card-body-inner">
+
+              <div>
+                <div class="section-label">パラメータ</div>
+                ${paramsToTable(ep.params)}
+              </div>
+
+              <div>
+                <div class="section-label">サンプル URL</div>
+                <div class="codeblock">${escapeHtml(ORIGIN + ep.sample)}<button class="mini-copy" data-copy="${escapeHtml(ORIGIN + ep.sample)}">コピー</button></div>
+              </div>
+
+              <div>
+                <div class="section-label">cURL</div>
+                <div class="codeblock">${escapeHtml(curlSample(ep))}<button class="mini-copy" data-copy="${escapeHtml(curlSample(ep))}">コピー</button></div>
+              </div>
+
+              <div>
+                <div class="section-label">JavaScript (fetch)</div>
+                <div class="codeblock">${escapeHtml(jsSample(ep))}<button class="mini-copy" data-copy="${escapeHtml(jsSample(ep))}">コピー</button></div>
+              </div>
+
+              <div>
+                <div class="section-label">ライブテスト</div>
+                <div class="tryit">
+                  <input type="text" class="tryit-input" value="${escapeHtml(ep.sample)}" spellcheck="false">
+                  <button class="run-btn" data-run="${idx}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    実行
+                  </button>
+                </div>
+                <div class="response" data-resp="${idx}">
+                  <div class="response-meta">
+                    <span class="status-pill" data-status>—</span>
+                    <span data-time>—</span>
+                    <span data-size></span>
+                  </div>
+                  <div class="codeblock" data-output style="max-height:320px">準備完了</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function render(list){
+      if(!list.length){
+        listEl.innerHTML = `
+          <div class="empty">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19zM10 14a4 4 0 1 1 0-8 4 4 0 0 1 0 8"/></svg>
+            <div>該当するエンドポイントが見つかりません</div>
+          </div>`;
+        return;
+      }
+      listEl.innerHTML = list.map((ep,i)=>cardHtml(ep,i)).join('');
+    }
+
+    function updateStats(){
+      document.getElementById('stat-total').textContent = ENDPOINTS.length;
+      document.getElementById('stat-get').textContent  = ENDPOINTS.filter(e=>e.method==='GET').length;
+      document.getElementById('stat-post').textContent = ENDPOINTS.filter(e=>e.method==='POST').length;
+    }
+
+    /* ===== Search & Filter ===== */
+    let activeFilter = 'all';
+    function applyFilter(){
+      const q = (searchInput.value||'').trim().toLowerCase();
+      const filtered = ENDPOINTS.filter(ep=>{
+        const matchQ = !q ||
+          ep.path.toLowerCase().includes(q) ||
+          ep.title.toLowerCase().includes(q) ||
+          ep.desc.toLowerCase().includes(q) ||
+          (ep.tags||[]).join(' ').toLowerCase().includes(q);
+        if(!matchQ) return false;
+        if(activeFilter==='all') return true;
+        if(activeFilter==='GET'||activeFilter==='POST') return ep.method===activeFilter;
+        return (ep.tags||[]).includes(activeFilter);
+      });
+      render(filtered);
+    }
+    searchInput.addEventListener('input', applyFilter);
+    filtersEl.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.chip');
+      if(!btn) return;
+      [...filtersEl.querySelectorAll('.chip')].forEach(c=>c.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      applyFilter();
+    });
+
+    /* ===== Card interactions (delegated) ===== */
+    listEl.addEventListener('click', async (e) => {
+      const toggle = e.target.closest('[data-toggle]');
+      if(toggle){
+        toggle.closest('.card').classList.toggle('open');
+        return;
+      }
+      const copyBtn = e.target.closest('.mini-copy');
+      if(copyBtn){
+        const text = copyBtn.dataset.copy;
+        try{
+          await navigator.clipboard.writeText(text);
+          showToast('コピーしました');
+        }catch(_){ showToast('コピーに失敗しました'); }
+        return;
+      }
+      const runBtn = e.target.closest('[data-run]');
+      if(runBtn){
+        const card = runBtn.closest('.card');
+        const idx = runBtn.dataset.run;
+        const ep = ENDPOINTS[Number(idx)];
+        const input = card.querySelector('.tryit-input');
+        const resp  = card.querySelector(`[data-resp="${idx}"]`);
+        const statusEl = resp.querySelector('[data-status]');
+        const timeEl = resp.querySelector('[data-time]');
+        const sizeEl = resp.querySelector('[data-size]');
+        const outEl  = resp.querySelector('[data-output]');
+
+        const url = input.value.trim();
+        if(!url){ showToast('URL を入力してください'); return; }
+
+        resp.classList.add('show');
+        runBtn.disabled = true;
+        runBtn.innerHTML = '<span class="spinner"></span> 実行中…';
+        outEl.textContent = '読み込み中...';
+        statusEl.className = 'status-pill';
+        statusEl.textContent = '...';
+        timeEl.textContent = '';
+        sizeEl.textContent = '';
+
+        const t0 = performance.now();
+        try{
+          const opts = { method: ep.method };
+          if(ep.method === 'POST'){
+            opts.headers = {'Content-Type':'application/json'};
+            opts.body = JSON.stringify({ videoId:'dQw4w9WgXcQ' });
+          }
+          const res = await fetch(url, opts);
+          const elapsed = (performance.now() - t0).toFixed(0);
+          const ct = res.headers.get('content-type') || '';
+          let body, isJson=false;
+          if(ct.includes('application/json')){
+            body = await res.json();
+            isJson = true;
+          } else {
+            body = await res.text();
+          }
+          statusEl.textContent = res.status;
+          statusEl.classList.add('s'+String(res.status)[0]);
+          timeEl.textContent = `${elapsed} ms`;
+          const text = isJson ? JSON.stringify(body, null, 2) : body;
+          sizeEl.textContent = `${(new Blob([text]).size/1024).toFixed(1)} KB`;
+          // truncate long output for performance
+          outEl.textContent = text.length > 30000 ? text.slice(0,30000) + '\n... (出力が長いため切り捨て)' : text;
+        }catch(err){
+          statusEl.textContent = 'ERR';
+          statusEl.classList.add('s5');
+          outEl.textContent = '⚠ ' + (err && err.message ? err.message : String(err));
+        } finally {
+          runBtn.disabled = false;
+          runBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> 実行';
+        }
+        return;
+      }
+    });
+
+    /* ===== Copy base URL ===== */
+    document.getElementById('copyBaseBtn').addEventListener('click', async (e)=>{
+      try{
+        await navigator.clipboard.writeText(ORIGIN);
+        const b = e.currentTarget;
+        const orig = b.textContent;
+        b.textContent = 'コピー済み';
+        b.classList.add('copied');
+        setTimeout(()=>{ b.textContent = orig; b.classList.remove('copied'); }, 1400);
+      }catch(_){ showToast('コピーに失敗しました'); }
+    });
+
+    /* ===== Theme toggle (persist) ===== */
+    const themeBtn = document.getElementById('themeToggle');
+    function applyTheme(t){
+      if(t==='light'){ document.body.classList.add('light-mode'); }
+      else { document.body.classList.remove('light-mode'); }
+    }
+    applyTheme(localStorage.getItem('mtp_theme') || 'dark');
+    themeBtn.addEventListener('click', ()=>{
+      const next = document.body.classList.contains('light-mode') ? 'dark' : 'light';
+      localStorage.setItem('mtp_theme', next);
+      applyTheme(next);
+    });
+
+    /* ===== Init ===== */
+    updateStats();
+    render(ENDPOINTS);
+
+    /* ===== Keyboard shortcut: "/" focus search ===== */
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === '/' && document.activeElement !== searchInput){
+        e.preventDefault(); searchInput.focus();
+      }
+    });
+  </script>
+</body>
+</html>
