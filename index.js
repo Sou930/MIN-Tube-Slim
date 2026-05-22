@@ -466,8 +466,19 @@ const shortsHtml = `
         }
         function toggleShortSub() {
           const isSub = localStorage.getItem(SHORT_SUB_KEY) === 'true';
-          if (isSub) localStorage.removeItem(SHORT_SUB_KEY);
-          else localStorage.setItem(SHORT_SUB_KEY, 'true');
+          if (isSub) {
+            localStorage.removeItem(SHORT_SUB_KEY);
+          } else {
+            localStorage.setItem(SHORT_SUB_KEY, 'true');
+            try {
+              const meta = {
+                name: SHORT_CHANNEL,
+                avatar: ${JSON.stringify(videoData.channelImage || '')},
+                subscribedAt: Date.now()
+              };
+              localStorage.setItem('subinfo_' + SHORT_CHANNEL, JSON.stringify(meta));
+            } catch (e) {}
+          }
           updateShortSubBtn();
         }
         updateShortSubBtn();
@@ -672,6 +683,15 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
         localStorage.removeItem(SUB_KEY_VIDEO);
       } else {
         localStorage.setItem(SUB_KEY_VIDEO, 'true');
+        // メタ情報も保存
+        try {
+          const meta = {
+            name: VIDEO_CHANNEL,
+            avatar: ${JSON.stringify(videoData.channelImage || '')},
+            subscribedAt: Date.now()
+          };
+          localStorage.setItem('subinfo_' + VIDEO_CHANNEL, JSON.stringify(meta));
+        } catch (e) {}
       }
       updateSubBtnUI();
     }
@@ -1453,6 +1473,255 @@ app.get("/update", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "app/sorry.html"));
 });
 
+// ===== 登録チャンネル一覧ページ =====
+app.get("/subscriptions", (req, res) => {
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登録チャンネル - YouTube</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0f0f0f; --surface:#212121; --card:#272727; --hover:#3f3f3f;
+      --text:#f1f1f1; --text-sub:#aaaaaa; --red:#ff0000; --border:#3f3f3f;
+      --nav-h:56px;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text); font-family:'Roboto',Arial,sans-serif; -webkit-font-smoothing:antialiased; }
+    /* ===== NAVBAR ===== */
+    .navbar {
+      position:fixed; top:0; width:100%; height:var(--nav-h);
+      background:var(--bg); display:flex; align-items:center;
+      padding:0 16px; z-index:1000; gap:8px;
+    }
+    .nav-left { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .icon-btn {
+      background:none; border:none; color:var(--text); cursor:pointer;
+      width:40px; height:40px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      transition:background .15s;
+    }
+    .icon-btn:hover { background:rgba(255,255,255,0.1); }
+    .icon-btn svg { width:24px; height:24px; fill:var(--text); }
+    .nav-logo { display:flex; align-items:center; gap:4px; text-decoration:none; color:var(--text); }
+    .nav-logo svg { width:90px; height:20px; }
+    .nav-logo-sub { font-size:10px; color:var(--text-sub); font-weight:500; align-self:flex-end; margin-bottom:5px; }
+    .nav-center {
+      flex:1; display:flex; align-items:center; justify-content:center;
+      max-width:640px; margin:0 auto;
+    }
+    .search-form {
+      display:flex; width:100%; height:40px; background:#121212;
+      border:1px solid var(--border); border-radius:40px; overflow:hidden;
+    }
+    .search-form:focus-within { border-color:#1c62b9; }
+    .search-form input {
+      flex:1; background:transparent; border:none; color:var(--text);
+      padding:0 4px 0 16px; outline:none; font-size:16px;
+      font-family:'Roboto',Arial,sans-serif;
+    }
+    .search-btn {
+      background:var(--surface); border:none; border-left:1px solid var(--border);
+      color:var(--text-sub); width:64px; height:100%;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; transition:background .1s;
+      border-radius:0 40px 40px 0;
+    }
+    .search-btn:hover { background:var(--hover); }
+    .search-btn svg { width:20px; height:20px; fill:currentColor; }
+    .nav-right { display:flex; align-items:center; gap:4px; margin-left:auto; flex-shrink:0; }
+    /* ===== MAIN ===== */
+    .container { max-width:1284px; margin:0 auto; padding:calc(var(--nav-h) + 24px) 24px 60px; }
+    .page-title { font-size:28px; font-weight:700; margin-bottom:24px; }
+    .empty-state {
+      text-align:center; padding:80px 16px; color:var(--text-sub);
+    }
+    .empty-state svg { width:64px; height:64px; fill:var(--text-sub); opacity:0.4; margin-bottom:16px; }
+    .empty-state h2 { font-size:18px; color:var(--text); margin-bottom:8px; }
+    .empty-state p { font-size:14px; color:var(--text-sub); }
+    .empty-state a {
+      display:inline-block; margin-top:20px; padding:10px 20px;
+      background:var(--text); color:var(--bg); border-radius:20px;
+      text-decoration:none; font-weight:500; font-size:14px;
+    }
+    .channel-list {
+      display:grid; gap:8px;
+    }
+    .channel-row {
+      display:flex; align-items:center; gap:16px;
+      padding:12px; border-radius:12px;
+      transition:background .15s;
+      text-decoration:none; color:inherit;
+    }
+    .channel-row:hover { background:var(--card); }
+    .channel-avatar-wrap {
+      width:80px; height:80px; border-radius:50%;
+      flex-shrink:0; overflow:hidden;
+      display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(135deg, #444 0%, #222 100%);
+      font-size:32px; font-weight:700; color:#fff;
+      position:relative;
+    }
+    @media (max-width:600px) { .channel-avatar-wrap { width:56px; height:56px; font-size:22px; } }
+    .channel-avatar-wrap img {
+      width:100%; height:100%; object-fit:cover;
+      position:absolute; inset:0; display:none;
+    }
+    .channel-avatar-wrap img.loaded { display:block; }
+    .channel-meta { flex:1; min-width:0; }
+    .channel-name {
+      font-size:16px; font-weight:500; color:var(--text);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      margin-bottom:4px;
+    }
+    .channel-handle { font-size:13px; color:var(--text-sub); margin-bottom:4px; }
+    .channel-sub-date { font-size:12px; color:var(--text-sub); }
+    .unsub-btn {
+      background:var(--card); color:var(--text); border:none;
+      padding:0 16px; height:36px; border-radius:18px;
+      font-size:14px; font-weight:500; cursor:pointer;
+      transition:background .15s; flex-shrink:0;
+      font-family:'Roboto',Arial,sans-serif;
+    }
+    .unsub-btn:hover { background:var(--hover); }
+    @media (max-width:600px) {
+      .container { padding:calc(var(--nav-h) + 16px) 16px 60px; }
+      .page-title { font-size:22px; }
+      .channel-handle { display:none; }
+      .nav-center { display:none; }
+      .unsub-btn { padding:0 12px; font-size:13px; }
+    }
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-left">
+    <button class="icon-btn" onclick="history.back()" aria-label="戻る">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </button>
+    <a href="/" class="nav-logo">
+      <svg viewBox="0 0 90 20" xmlns="http://www.w3.org/2000/svg"><g><path d="M27.9727 3.12324C27.6435 1.89323 26.6768 0.926623 25.4468 0.597366C23.2197 0 14.285 0 14.285 0C14.285 0 5.35042 0 3.12323 0.597366C1.89323 0.926623 0.926623 1.89323 0.597366 3.12324C0 5.35042 0 10 0 10C0 10 0 14.6496 0.597366 16.8768C0.926623 18.1068 1.89323 19.0734 3.12323 19.4026C5.35042 20 14.285 20 14.285 20C14.285 20 23.2197 20 25.4468 19.4026C26.6768 19.0734 27.6435 18.1068 27.9727 16.8768C28.5701 14.6496 28.5701 10 28.5701 10C28.5701 10 28.5677 5.35042 27.9727 3.12324Z" fill="#FF0000"/><path d="M11.4253 14.2854L18.8477 10.0004L11.4253 5.71533V14.2854Z" fill="white"/></g><g><path d="M34.6024 13.0036L31.3945 1.41846H34.1932L35.3174 6.6701C35.6043 7.96361 35.8136 9.06662 35.95 9.97913H36.0323C36.1264 9.32532 36.3381 8.22937 36.665 6.68892L37.8291 1.41846H40.6278L37.3799 13.0036V18.561H34.6001V13.0036H34.6024Z" fill="#fff"/><path d="M41.4697 18.1937C40.9053 17.8127 40.5031 17.2204 40.2632 16.4167C40.0257 15.6131 39.9058 14.5436 39.9058 13.2055V11.385C39.9058 10.0345 40.0422 8.94917 40.315 8.13146C40.5878 7.31374 41.0135 6.71912 41.592 6.34763C42.1706 5.97614 42.9296 5.79088 43.8703 5.79088C44.797 5.79088 45.5373 5.97849 46.0971 6.35586C46.6545 6.73322 47.0626 7.32785 47.3236 8.13146C47.5847 8.93742 47.7152 10.0227 47.7152 11.385V13.2055C47.7152 14.5436 47.5882 15.6178 47.3354 16.429C47.0825 17.2428 46.6745 17.835 46.1112 18.2088C45.548 18.5826 44.7864 18.7702 43.8265 18.7702C42.8385 18.7702 42.0341 18.5768 41.4697 18.1937ZM44.6932 16.2496C44.8496 15.8405 44.9295 15.1738 44.9295 14.2473V10.3138C44.9295 9.41391 44.8519 8.75541 44.6932 8.34396C44.5345 7.93016 44.2570 7.7239 43.8584 7.7239C43.4763 7.7239 43.2058 7.93016 43.0471 8.34396C42.8861 8.75776 42.8085 9.41391 42.8085 10.3138V14.2473C42.8085 15.1738 42.8838 15.8428 43.0354 16.2496C43.1871 16.6587 43.4575 16.8649 43.8584 16.8649C44.2570 16.8649 44.5345 16.6587 44.6932 16.2496Z" fill="#fff"/><path d="M58.0824 18.5634H55.8765L55.6313 17.0289H55.5702C54.9705 18.1871 54.0707 18.7661 52.8708 18.7661C52.0406 18.7661 51.4269 18.4937 51.0312 17.9512C50.6354 17.4063 50.4391 16.5557 50.4391 15.397V6.03751H53.2588V15.2332C53.2588 15.7923 53.32 16.1908 53.4422 16.4276C53.5645 16.6645 53.7702 16.7842 54.0566 16.7842C54.3014 16.7842 54.5368 16.7092 54.7628 16.5581C54.9888 16.4069 55.1547 16.2158 55.2675 15.9837V6.03516H58.0824V18.5634Z" fill="#fff"/><path d="M65.4423 0.376898V2.65541H62.6606V18.5635H59.9019V2.65541H57.1202V0.376898H65.4423Z" fill="#fff"/><path d="M72.2378 6.03751V18.5634H70.0319L69.7867 17.0289H69.7256C69.1259 18.1871 68.2261 18.7661 67.0263 18.7661C66.1961 18.7661 65.5823 18.4937 65.1867 17.9512C64.7909 17.4063 64.5945 16.5557 64.5945 15.397V6.03751H67.4142V15.2332C67.4142 15.7923 67.4753 16.1908 67.5976 16.4276C67.7199 16.6645 67.9256 16.7842 68.212 16.7842C68.4568 16.7842 68.6922 16.7092 68.9182 16.5581C69.1442 16.4069 69.3101 16.2158 69.4229 15.9837V6.03516H72.2378V6.03751Z" fill="#fff"/><path d="M81.595 8.0387C81.4239 7.24917 81.1487 6.67797 80.7676 6.32048C80.3866 5.963 79.8621 5.78363 79.1971 5.78363C78.682 5.78363 78.1999 5.92779 77.7531 6.21613C77.3063 6.50447 76.9605 6.8855 76.7204 7.35577H76.6993V0H73.9812V18.5634H76.3094L76.5969 17.3776H76.6581C76.8723 17.8003 77.1939 18.1342 77.6243 18.3823C78.0547 18.6282 78.5345 18.7512 79.0612 18.7512C80.0056 18.7512 80.7041 18.3147 81.1532 17.4404C81.6022 16.5663 81.8281 15.1996 81.8281 13.343V11.4377C81.8281 10.0454 81.7414 8.95015 81.5701 8.16063L81.595 8.0387ZM79.0095 13.1804C79.0095 14.0876 78.972 14.7984 78.8971 15.3128C78.8219 15.8272 78.6962 16.1924 78.5179 16.4082C78.342 16.624 78.1019 16.7319 77.8019 16.7319C77.5688 16.7319 77.3522 16.6779 77.1545 16.5666C76.9568 16.4575 76.7965 16.2934 76.6743 16.0775V8.96154C76.7682 8.6209 76.9329 8.34433 77.166 8.12624C77.3967 7.90814 77.6513 7.79706 77.9255 7.79706C78.2114 7.79706 78.4327 7.90932 78.5862 8.13568C78.7421 8.36437 78.8501 8.74519 78.9112 9.28135C78.9722 9.81752 79.0017 10.5777 79.0017 11.5677V13.1804H79.0095Z" fill="#fff"/><path d="M85.3402 13.7654C85.3402 14.5667 85.3637 15.1671 85.4108 15.5693C85.4579 15.9714 85.5566 16.2645 85.7095 16.4499C85.8624 16.6328 86.0976 16.7257 86.4153 16.7257C86.8443 16.7257 87.1417 16.5586 87.3 16.2268C87.4607 15.8949 87.5476 15.3411 87.5664 14.5687L89.9979 14.7115C90.0114 14.8202 90.0181 14.9706 90.0181 15.1604C90.0181 16.3304 89.6979 17.2046 89.0589 17.7794C88.4199 18.3542 87.5147 18.6429 86.3433 18.6429C84.9367 18.6429 83.9522 18.2009 83.3886 17.3193C82.8226 16.4376 82.5418 15.0735 82.5418 13.2271V11.0166C82.5418 9.11592 82.8344 7.72677 83.4192 6.84966C84.0042 5.97255 85.0052 5.53516 86.4242 5.53516C87.4014 5.53516 88.1518 5.71452 88.6748 6.07556C89.1979 6.43659 89.5664 6.99721 89.7806 7.7593C89.9947 8.52379 90.1017 9.57829 90.1017 10.9268V13.0928H85.3402V13.7654ZM85.6976 7.95405C85.5519 8.13085 85.4569 8.41917 85.4108 8.82126C85.3637 9.22336 85.3402 9.83337 85.3402 10.6535V11.5793H87.4203V10.6535C87.4203 9.84741 87.3919 9.23739 87.3377 8.82126C87.2835 8.40513 87.1885 8.11447 87.0498 7.95405C86.9111 7.79363 86.6997 7.71106 86.4197 7.71106C86.1359 7.71106 85.9241 7.79597 85.6976 7.95405Z" fill="#fff"/></g></svg>
+    </a>
+  </div>
+  <div class="nav-center">
+    <form class="search-form" onsubmit="event.preventDefault(); const q=this.querySelector('input').value.trim(); if(q) window.location.href='/?q='+encodeURIComponent(q);">
+      <input type="text" placeholder="検索" name="q">
+      <button type="submit" class="search-btn">
+        <svg viewBox="0 0 24 24"><path d="M20.87 20.17l-5.59-5.59C16.35 13.35 17 11.75 17 10c0-3.87-3.13-7-7-7s-7 3.13-7 7 3.13 7 7 7c1.75 0 3.35-.65 4.58-1.71l5.59 5.59.7-.71zM10 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg>
+      </button>
+    </form>
+  </div>
+  <div class="nav-right">
+    <a href="/" class="icon-btn" title="ホーム">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    </a>
+  </div>
+</nav>
+
+<div class="container">
+  <h1 class="page-title">登録チャンネル</h1>
+  <div id="content"></div>
+</div>
+
+<script>
+  const colors = ['#ff0000','#ff6d00','#ffd600','#00c853','#00b0ff','#651fff','#d500f9','#f50057'];
+  function colorOf(name) {
+    const i = (name||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0) % colors.length;
+    return colors[i];
+  }
+  function getSubscriptions() {
+    const list = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('subscribed_') && localStorage.getItem(key) === 'true') {
+        const name = key.replace('subscribed_', '');
+        let meta = {};
+        try {
+          const raw = localStorage.getItem('subinfo_' + name);
+          if (raw) meta = JSON.parse(raw);
+        } catch (e) {}
+        list.push({ name, avatar: meta.avatar || '', subscribedAt: meta.subscribedAt || 0 });
+      }
+    }
+    // 新しい順
+    list.sort((a, b) => (b.subscribedAt || 0) - (a.subscribedAt || 0));
+    return list;
+  }
+  function formatDate(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return d.getFullYear() + '/' + (d.getMonth()+1) + '/' + d.getDate() + ' に登録';
+  }
+  function render() {
+    const list = getSubscriptions();
+    const content = document.getElementById('content');
+    if (list.length === 0) {
+      content.innerHTML = \`
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24"><path d="M10 18v-6l5 3-5 3zm7-15H7v1h10V3zm3 3H4v1h16V6zm2 3H2v12h20V9zM4 19V10h16v9H4z"/></svg>
+          <h2>登録チャンネルはまだありません</h2>
+          <p>気になる動画から「チャンネル登録」ボタンを押してみましょう。</p>
+          <a href="/">ホームに戻る</a>
+        </div>\`;
+      return;
+    }
+    const html = list.map(ch => {
+      const initial = (ch.name[0] || 'C').toUpperCase();
+      const bg = colorOf(ch.name);
+      const handle = '@' + (ch.name || '').toLowerCase().replace(/\\s+/g, '');
+      return \`
+        <a href="/channel/\${encodeURIComponent(ch.name)}" class="channel-row">
+          <div class="channel-avatar-wrap" style="background:\${bg};">
+            <span>\${initial}</span>
+            \${ch.avatar ? \`<img src="\${ch.avatar}" alt="\${ch.name}" onload="this.classList.add('loaded')" onerror="this.remove()">\` : ''}
+          </div>
+          <div class="channel-meta">
+            <div class="channel-name">\${ch.name}</div>
+            <div class="channel-handle">\${handle}</div>
+            <div class="channel-sub-date">\${formatDate(ch.subscribedAt)}</div>
+          </div>
+          <button class="unsub-btn" onclick="unsub(event, '\${ch.name.replace(/'/g, "\\\\'")}')">登録済み</button>
+        </a>\`;
+    }).join('');
+    content.innerHTML = \`<div class="channel-list">\${html}</div>\`;
+    // アバターがない場合は ui-avatars でフォールバック
+    list.forEach((ch) => {
+      if (!ch.avatar) {
+        const rows = document.querySelectorAll('.channel-row');
+        rows.forEach(r => {
+          if (r.href.endsWith(encodeURIComponent(ch.name))) {
+            const wrap = r.querySelector('.channel-avatar-wrap');
+            if (wrap && !wrap.querySelector('img')) {
+              const img = document.createElement('img');
+              img.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(ch.name) + '&background=random&color=fff&size=128&bold=true';
+              img.alt = ch.name;
+              img.onload = () => img.classList.add('loaded');
+              img.onerror = () => img.remove();
+              wrap.appendChild(img);
+            }
+          }
+        });
+      }
+    });
+  }
+  function unsub(e, name) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(name + ' のチャンネル登録を解除しますか？')) return;
+    localStorage.removeItem('subscribed_' + name);
+    localStorage.removeItem('subinfo_' + name);
+    render();
+  }
+  render();
+</script>
+</body>
+</html>`;
+  res.send(html);
+});
+
 app.get("/blog", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "app/sorry.html"));
 });
@@ -1937,7 +2206,21 @@ app.get("/channel/:channelName", (req, res) => {
     }
   }
   function toggleSubscribe() {
-    localStorage.setItem(SUB_KEY, localStorage.getItem(SUB_KEY) !== 'true');
+    const isSub = localStorage.getItem(SUB_KEY) === 'true';
+    if (isSub) {
+      localStorage.removeItem(SUB_KEY);
+    } else {
+      localStorage.setItem(SUB_KEY, 'true');
+      // メタ情報も保存（登録チャンネル一覧ページで使用）
+      try {
+        const meta = {
+          name: CHANNEL_NAME,
+          avatar: channelAvatarUrl || '',
+          subscribedAt: Date.now()
+        };
+        localStorage.setItem('subinfo_' + CHANNEL_NAME, JSON.stringify(meta));
+      } catch (e) {}
+    }
     updateSubscribeUI();
   }
 
