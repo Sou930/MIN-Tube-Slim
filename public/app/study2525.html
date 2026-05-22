@@ -984,6 +984,18 @@ function initApp() {
   } else {
     navigate('home');
   }
+
+  // ── MinTube 連携: ?v=VIDEO_ID で自動再生（高速再生用） ──
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const vid = params.get('v');
+    if (vid && typeof playVideo === 'function') {
+      // navigate('home') の直後だと UI が出来ていない可能性があるので少し遅延
+      setTimeout(() => {
+        try { playVideo(vid, ''); } catch (e) { console.warn('auto playVideo failed', e); }
+      }, 50);
+    }
+  } catch (e) { /* ignore */ }
 }
 
 function toggleTheme() {
