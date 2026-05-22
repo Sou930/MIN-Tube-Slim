@@ -26,6 +26,9 @@ Min-Tube-Proの独自派生です
 ---
 
 ## 更新履歴
+###ver1.1.0
+- 12アプリを削除
+- MinTube の高速化 - Study2525 / K-Tube サーバー追加
 ### ver1.0.0
 MinTubeの派生プロジェクトとしてSlimが開始
 
