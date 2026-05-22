@@ -612,6 +612,8 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
                         <div class="server-option" onclick="changeServer('YoutubeEdu-Kahoot', '/kahoot-edu/${videoId}', event)">YoutubeEdu-Kahoot</div>
                         <div class="server-option" onclick="changeServer('YoutubeEdu-Scratch', '/scratch-edu/${videoId}', event)">YoutubeEdu-Scratch</div>
                         <div class="server-option" onclick="changeServer('Youtube-Pro', '/pro-stream/${videoId}', event)">Youtube-Pro</div>
+                        <div class="server-option" onclick="changeServer('Study2525', '/study2525-stream/${videoId}', event)">Study2525 ⚡</div>
+                        <div class="server-option" onclick="changeServer('K-Tube', '/ktube-stream/${videoId}', event)">K-Tube ⚡</div>
                         <div class="server-option" onclick="changeServer('Elixir-Network', '/stream-network/${videoId}', event)">Elixir-Network</div>
                     </div>
                 </div>
@@ -709,7 +711,7 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
             }
 
             const playerContainer = document.getElementById('playerWrapper');
-            const forceIframe = ['YoutubeEdu-Kahoot', 'YoutubeEdu-Scratch', 'Youtube-Pro', 'youtube-nocookie', 'Elixir-Network'].includes(serverName);
+            const forceIframe = ['YoutubeEdu-Kahoot', 'YoutubeEdu-Scratch', 'Youtube-Pro', 'youtube-nocookie', 'Elixir-Network', 'Study2525', 'K-Tube'].includes(serverName);
             const isIframe = forceIframe || newUrl.includes('embed');
 
             let playerHtml = '';
@@ -784,6 +786,8 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
             'YoutubeEdu-Kahoot':  '/kahoot-edu/${videoId}',
             'YoutubeEdu-Scratch': '/scratch-edu/${videoId}',
             'Youtube-Pro':        '/pro-stream/${videoId}',
+            'Study2525':          '/study2525-stream/${videoId}',
+            'K-Tube':             '/ktube-stream/${videoId}',
             'Elixir-Network': '/elixir-stream/${videoId}'
         };
         const serverName = serverEndpoints.hasOwnProperty(savedMode) ? savedMode : 'googlevideo';
@@ -960,6 +964,24 @@ app.get('/kahoot-edu/:id', async (req, res) => {
 app.get('/nocookie/:id', (req, res) => {
   const id = req.params.id;
   const url = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`;
+  res.set('Content-Type', 'text/plain; charset=utf-8');
+  res.send(url);
+});
+
+// ── Study2525 Fast Server ──
+// 既存の /dl-pro (study2525.html) をiframe再生用に流用してロード短縮
+app.get('/study2525-stream/:id', (req, res) => {
+  const id = req.params.id;
+  const url = `/dl-pro?v=${id}&autoplay=1&embed=1`;
+  res.set('Content-Type', 'text/plain; charset=utf-8');
+  res.send(url);
+});
+
+// ── K-Tube Fast Server ──
+// KA1121Studio製 K-Tube インスタンスを動画サーバーとして利用
+app.get('/ktube-stream/:id', (req, res) => {
+  const id = req.params.id;
+  const url = `https://k-tube-for-public-release-2.vercel.app/watch?v=${id}&autoplay=1`;
   res.set('Content-Type', 'text/plain; charset=utf-8');
   res.send(url);
 });
