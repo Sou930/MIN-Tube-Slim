@@ -65,6 +65,132 @@ function fetchWithTimeout(url, options = {}, timeout = 5000) {
   ]);
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// v1.3.0: 動画一覧ページにチャンネルの画像が表示されないバグの修正用ヘルパー
+//
+// youtube-search-api (yts) は videoRenderer から channelThumbnail を取り出さない
+// ため、フロントエンドでは常に ui-avatars の代替アイコン（簡易表示）が出ていた。
+// ここで生の YouTube 検索ページから videoRenderer を直接パースし、
+// {id, channelThumbnail, channelId, viewCountText, publishedTimeText} を抽出する。
+// 取得結果は短時間キャッシュして API レート/レイテンシ影響を抑える。
+// ──────────────────────────────────────────────────────────────────────────
+const channelMetaCache = new Map(); // key: videoId -> {channelThumbnail, channelId, viewCountText, publishedTimeText, expiry}
+const channelMetaQueryCache = new Map(); // key: query -> {expiry, map(videoId->meta)}
+
+function pickThumbUrl(thumbObj) {
+  try {
+    if (!thumbObj) return '';
+    if (Array.isArray(thumbObj)) {
+      return thumbObj[thumbObj.length - 1]?.url || '';
+    }
+    if (thumbObj.thumbnails && Array.isArray(thumbObj.thumbnails)) {
+      const arr = thumbObj.thumbnails;
+      return arr[arr.length - 1]?.url || '';
+    }
+    if (typeof thumbObj === 'string') return thumbObj;
+  } catch (e) {}
+  return '';
+}
+
+function extractVideoMetaFromRenderer(vr) {
+  if (!vr || !vr.videoId) return null;
+  const channelThumbObj =
+    vr.channelThumbnailSupportedRenderers?.channelThumbnailWithLinkRenderer?.thumbnail ||
+    vr.channelThumbnail;
+  let channelThumbnail = pickThumbUrl(channelThumbObj);
+  if (channelThumbnail && channelThumbnail.startsWith('//')) channelThumbnail = 'https:' + channelThumbnail;
+
+  const ownerRun = vr.ownerText?.runs?.[0] || vr.shortBylineText?.runs?.[0] || null;
+  const channelId =
+    ownerRun?.navigationEndpoint?.browseEndpoint?.browseId ||
+    vr.shortBylineText?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.browseId ||
+    '';
+
+  const viewCountText =
+    vr.viewCountText?.simpleText ||
+    (vr.viewCountText?.runs ? vr.viewCountText.runs.map(r => r.text).join('') : '') ||
+    vr.shortViewCountText?.simpleText ||
+    '';
+  const publishedTimeText = vr.publishedTimeText?.simpleText || '';
+
+  return {
+    id: vr.videoId,
+    channelThumbnail,
+    channelId,
+    viewCountText,
+    publishedTimeText
+  };
+}
+
+async function fetchYouTubeSearchMeta(query) {
+  const cached = channelMetaQueryCache.get(query);
+  if (cached && cached.expiry > Date.now()) return cached.map;
+
+  const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&hl=ja&gl=JP`;
+  const headers = {
+    'User-Agent': userAgents[Math.floor(Math.random() * userAgents.length)],
+    'Accept-Language': 'ja,en;q=0.8'
+  };
+  const map = new Map();
+  try {
+    const r = await fetchWithTimeout(url, { headers }, 4000);
+    if (!r.ok) return map;
+    const html = await r.text();
+    const idx = html.indexOf('var ytInitialData =');
+    if (idx === -1) return map;
+    const after = html.slice(idx + 'var ytInitialData ='.length);
+    // 終端を慎重に探す（最後に "</script>" が来る最初の位置）
+    const end = after.indexOf('</script>');
+    if (end === -1) return map;
+    let jsonText = after.slice(0, end).trim();
+    if (jsonText.endsWith(';')) jsonText = jsonText.slice(0, -1);
+    let data;
+    try { data = JSON.parse(jsonText); } catch (e) { return map; }
+
+    const sections = data?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
+    for (const sec of sections) {
+      const items = sec?.itemSectionRenderer?.contents || [];
+      for (const it of items) {
+        if (it.videoRenderer) {
+          const meta = extractVideoMetaFromRenderer(it.videoRenderer);
+          if (meta) {
+            map.set(meta.id, meta);
+            channelMetaCache.set(meta.id, { ...meta, expiry: Date.now() + 30 * 60 * 1000 });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    // 失敗時は空マップを返す（フロント側で ui-avatars フォールバックされる）
+  }
+  channelMetaQueryCache.set(query, { expiry: Date.now() + 5 * 60 * 1000, map });
+  return map;
+}
+
+// yts の検索結果に channelThumbnail / channelId / viewCountText / publishedTimeText を上書き付与する
+async function enrichItemsWithChannelMeta(items, query) {
+  if (!Array.isArray(items) || items.length === 0) return items;
+  let metaMap;
+  try {
+    metaMap = await fetchYouTubeSearchMeta(query);
+  } catch (e) { metaMap = new Map(); }
+
+  for (const it of items) {
+    if (!it || it.type !== 'video' || !it.id) continue;
+    let meta = metaMap.get(it.id);
+    if (!meta) {
+      const cached = channelMetaCache.get(it.id);
+      if (cached && cached.expiry > Date.now()) meta = cached;
+    }
+    if (!meta) continue;
+    if (meta.channelThumbnail && !it.channelThumbnail) it.channelThumbnail = meta.channelThumbnail;
+    if (meta.channelId && !it.channelId) it.channelId = meta.channelId;
+    if (meta.viewCountText && !it.viewCountText) it.viewCountText = meta.viewCountText;
+    if (meta.publishedTimeText && !it.publishedTimeText) it.publishedTimeText = meta.publishedTimeText;
+  }
+  return items;
+}
+
 setInterval(() => {
     const now = Date.now();
     for (const [videoId, cachedItem] of videoCache.entries()) {
@@ -74,30 +200,10 @@ setInterval(() => {
     }
 }, 300000);
 
-// ミドルウェア: 人間確認,
-app.use(async (req, res, next) => {
-  if (req.path.startsWith("/api") || req.path.startsWith("/video") || req.path === "/") {
-    if (!req.cookies || req.cookies.humanVerified !== "true") {
-      const pages = [
-        'https://raw.githubusercontent.com/mino-hobby-pro/memo/refs/heads/main/min-tube-pro-main-loading.txt',
-        'https://raw.githubusercontent.com/mino-hobby-pro/memo/refs/heads/main/min-tube-pro-sub-roading-like-command-loader-local.txt',
-        'https://raw.githubusercontent.com/mino-hobby-pro/memo/refs/heads/main/google.txt',
-        'https://raw.githubusercontent.com/mino-hobby-pro/memo/refs/heads/main/history.html.txt',
-        'https://raw.githubusercontent.com/mino-hobby-pro/memo/refs/heads/main/gisou/chapcha.html',
-        'https://raw.githubusercontent.com/mino-hobby-pro/memo/refs/heads/main/gisou/easy.html'
-      ];
-      const randomPage = pages[Math.floor(Math.random() * pages.length)];
-      try {
-        const response = await fetch(randomPage);
-        const htmlContent = await response.text();
-        return res.render("robots", { content: htmlContent });
-      } catch (err) {
-        return res.render("robots", { content: "<p>Verification Required</p>" });
-      }
-    }
-  }
-  next();
-});
+// v1.3.0: MinTubeでの偽装ページ/ローディング表示を削除（人間確認ミドルウェア廃止）。
+// 旧仕様では humanVerified Cookie が無い場合に robots テンプレートで
+// ダミーの「読み込み中ページ」「reCAPTCHA 風の確認ページ」を返していたが、
+// ユーザー体験を損なうため完全に取り除き、リクエストはそのまま処理する。
 
 // --- API ENDPOINTS ---
 
@@ -123,6 +229,13 @@ app.get("/api/trending", async (req, res) => {
     ]);
 
     let combined = [...(res1.items || []), ...(res2.items || [])];
+
+    // v1.3.0: 各シード結果に channelThumbnail などを付与（チャンネル画像が表示されないバグ修正）
+    await Promise.all([
+      enrichItemsWithChannelMeta(res1.items || [], seed1),
+      enrichItemsWithChannelMeta(res2.items || [], seed2)
+    ]);
+
     const finalItems = [];
     const seenIdsServer = new Set();
 
@@ -289,6 +402,10 @@ app.get("/api/search", async (req, res, next) => {
         merged.push(it);
       }
     }
+
+    // v1.3.0: チャンネル画像が表示されないバグ修正 — videoRenderer から
+    // channelThumbnail / channelId / viewCountText / publishedTimeText を補完
+    try { await enrichItemsWithChannelMeta(merged, query); } catch (e) {}
 
     // YouTube 標準の検索結果順を維持するため、merged はそのまま返す
     res.json({ items: merged, nextPage: ytsRes.status === 'fulfilled' ? ytsRes.value.nextPage : null });
