@@ -449,6 +449,117 @@
     .meta:hover .card-menu-btn { opacity: 1; }
     .card-menu-btn:hover { background: rgba(255,255,255,0.1); }
 
+    /* ===== Channel result card ===== */
+    .channel-result-card {
+      grid-column: 1 / -1;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      transition: background 0.15s;
+    }
+    .channel-result-card:hover { background: rgba(255,255,255,0.05); }
+    body.light-mode .channel-result-card { background: rgba(0,0,0,0.02); }
+    body.light-mode .channel-result-card:hover { background: rgba(0,0,0,0.05); }
+    .channel-result-row {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    .channel-result-avatar {
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #444 0%, #222 100%);
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text); font-weight: 700; font-size: 42px;
+      overflow: hidden;
+      position: relative;
+    }
+    .channel-result-avatar img {
+      width: 100%; height: 100%; object-fit: cover;
+      position: absolute; top: 0; left: 0;
+      border-radius: 50%; display: none;
+    }
+    .channel-result-avatar img.loaded { display: block; }
+    .channel-result-avatar .ch-initial { position: relative; z-index: 1; }
+    .channel-result-info { flex: 1; min-width: 0; }
+    .channel-result-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #fff;
+      background: var(--accent, #ff0000);
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .channel-result-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0 0 4px;
+    }
+    .channel-result-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+    .channel-result-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    @media (max-width: 768px) {
+      .channel-result-row { gap: 14px; }
+      .channel-result-avatar { width: 80px; height: 80px; font-size: 28px; }
+      .channel-result-name { font-size: 15px; }
+    }
+
+    /* ===== Playlist result card ===== */
+    .playlist-card-result .playlist-thumb-wrap {
+      position: relative;
+    }
+    .playlist-card-result .playlist-thumb-wrap::after {
+      content: '';
+      position: absolute;
+      right: 0; top: 8%;
+      width: 30%; height: 84%;
+      background: linear-gradient(to right, rgba(0,0,0,0.45), rgba(0,0,0,0.85));
+      border-radius: 0 12px 12px 0;
+      pointer-events: none;
+    }
+    .playlist-overlay {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 13px;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      width: 25%;
+      text-align: center;
+    }
+    .playlist-badge {
+      position: absolute;
+      left: 8px; top: 8px;
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      z-index: 2;
+    }
+
     /* Loading / Empty */
     #loading { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; }
     .empty { text-align: center; color: var(--text-muted); padding: 40px; font-size: 14px; }
@@ -1109,14 +1220,23 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
       for (const it of list) {
         if (!it) continue;
         let id = null;
+        let itemType = it.type || null;
         if (typeof it.id === 'string') id = it.id;
         else if (it.id && typeof it.id === 'object') {
-          id = it.id.videoId || it.id.channelId || it.id.playlistId || it.id;
-        } else if (it.videoId) { id = it.videoId; }
+          if (it.id.videoId) { id = it.id.videoId; itemType = itemType || 'video'; }
+          else if (it.id.channelId) { id = it.id.channelId; itemType = itemType || 'channel'; }
+          else if (it.id.playlistId) { id = it.id.playlistId; itemType = itemType || 'playlist'; }
+          else id = it.id;
+        } else if (it.videoId) { id = it.videoId; itemType = itemType || 'video'; }
         if (!id) continue;
         id = String(id);
-        if (id.startsWith('UC')) continue;
+        // type が無くて UC で始まる場合はチャンネル扱い
+        if (!itemType && id.startsWith('UC')) itemType = 'channel';
+        // type が無くて PL/RD/UU/OL で始まる場合はプレイリスト扱い
+        if (!itemType && /^(PL|RD|UU|OL|FL|LL)[A-Za-z0-9_-]+$/.test(id)) itemType = 'playlist';
+        if (!itemType) itemType = 'video';
         it.id = id;
+        it.type = itemType;
         out.push(it);
       }
       return out;
@@ -1201,8 +1321,13 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
 
         let shorts = [];
         const normals = [];
+        const channels = [];
+        const playlists = [];
         items.forEach(item => {
           if (!item || !item.id) return;
+          const t = item.type || 'video';
+          if (t === 'channel') { channels.push(item); return; }
+          if (t === 'playlist') { playlists.push(item); return; }
           const title = item.title || '';
           if (title.includes('#')) shorts.push(item);
           else normals.push(item);
@@ -1302,6 +1427,106 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
             img.onerror = () => img.remove();
             avatarEl.appendChild(img);
           }
+          videoGrid.appendChild(card);
+        });
+
+        // ── チャンネルカード描画 ──
+        channels.forEach(item => {
+          if (!item || !item.id) return;
+          const key = 'channel:' + item.id;
+          if (displayedIds.has(key)) return;
+          displayedIds.add(key);
+
+          const name = item.title || item.channelTitle || '';
+          const initial = name ? name[0].toUpperCase() : 'C';
+          let avatarUrl = '';
+          if (Array.isArray(item.thumbnail) && item.thumbnail.length) {
+            avatarUrl = item.thumbnail[item.thumbnail.length-1].url || '';
+          } else if (typeof item.thumbnail === 'string') {
+            avatarUrl = item.thumbnail;
+          } else if (item.thumbnail && item.thumbnail.thumbnails && item.thumbnail.thumbnails.length) {
+            avatarUrl = item.thumbnail.thumbnails[item.thumbnail.thumbnails.length-1].url || '';
+          }
+          if (avatarUrl && avatarUrl.startsWith('//')) avatarUrl = 'https:' + avatarUrl;
+
+          const subText = item.subCountText || (item.subCount ? `登録者 ${item.subCount.toLocaleString()}人` : '');
+          const videoCountText = item.videoCount ? `${item.videoCount}本の動画` : '';
+          const desc = (item.description || '').slice(0, 80);
+
+          const card = document.createElement('a');
+          card.className = 'video-card channel-result-card';
+          card.href = `/channel/${encodeURIComponent(name)}`;
+          card.innerHTML = `
+            <div class="channel-result-row">
+              <div class="channel-result-avatar" data-initial="${initial}">
+                <span class="ch-initial">${initial}</span>
+                ${avatarUrl ? `<img src="${avatarUrl}" alt="${name}" onload="this.classList.add('loaded')" onerror="this.remove()">` : ''}
+              </div>
+              <div class="channel-result-info">
+                <div class="channel-result-badge">チャンネル</div>
+                <h3 class="channel-result-name">${name}</h3>
+                <div class="channel-result-meta">${[subText, videoCountText].filter(Boolean).join(' • ')}</div>
+                ${desc ? `<div class="channel-result-desc">${desc}</div>` : ''}
+              </div>
+            </div>
+          `;
+          if (!avatarUrl) {
+            const av = card.querySelector('.channel-result-avatar');
+            const img = document.createElement('img');
+            img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&size=160&bold=true`;
+            img.onload = () => img.classList.add('loaded');
+            img.onerror = () => img.remove();
+            av.appendChild(img);
+          }
+          videoGrid.appendChild(card);
+        });
+
+        // ── プレイリストカード描画 ──
+        playlists.forEach(item => {
+          if (!item || !item.id) return;
+          const key = 'playlist:' + item.id;
+          if (displayedIds.has(key)) return;
+          displayedIds.add(key);
+
+          const title = item.title || '';
+          const channel = item.channelTitle || '';
+          const count = item.videoCount || item.length || 0;
+          let thumbUrl = '';
+          if (Array.isArray(item.thumbnail) && item.thumbnail.length) {
+            thumbUrl = item.thumbnail[item.thumbnail.length-1].url || '';
+          } else if (typeof item.thumbnail === 'string') {
+            thumbUrl = item.thumbnail;
+          } else if (item.thumbnail && item.thumbnail.thumbnails && item.thumbnail.thumbnails.length) {
+            thumbUrl = item.thumbnail.thumbnails[item.thumbnail.thumbnails.length-1].url || '';
+          }
+          if (thumbUrl && thumbUrl.startsWith('//')) thumbUrl = 'https:' + thumbUrl;
+          // フォールバック: 最初の動画のサムネ
+          if (!thumbUrl && item.videos && item.videos[0]) {
+            const v = item.videos[0];
+            const vid = v.id || v.videoId;
+            if (vid) thumbUrl = `https://i.ytimg.com/vi/${vid}/mqdefault.jpg`;
+          }
+
+          const card = document.createElement('a');
+          card.className = 'video-card playlist-card-result';
+          card.href = `/playlist?list=${encodeURIComponent(item.id)}`;
+          card.innerHTML = `
+            <div class="thumb playlist-thumb-wrap">
+              ${thumbUrl ? `<img src="${thumbUrl}" loading="lazy" alt="${title}">` : '<div style="width:100%;height:100%;background:#1a1a1a;"></div>'}
+              <div class="playlist-overlay">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M22 7H2v1h20V7zm-3-4H5v1h14V3zM2 17h13v-5H2v5zm15-5v5l5-2.5L17 12z"/></svg>
+                <span>${count}本</span>
+              </div>
+              <div class="playlist-badge">プレイリスト</div>
+            </div>
+            <div class="meta">
+              <div class="details">
+                <h3>${title}</h3>
+                <a href="/channel/${encodeURIComponent(channel)}" class="channel-name" onclick="event.stopPropagation()" style="text-decoration:none;color:var(--text-muted);">${channel}</a>
+                <div class="video-stats">プレイリスト全体を見る</div>
+              </div>
+            </div>
+          `;
           videoGrid.appendChild(card);
         });
 
