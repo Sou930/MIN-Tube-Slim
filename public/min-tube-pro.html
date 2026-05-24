@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>MIN-Tube-Slim — The Ultimate Hub</title>
+<title>MIN-Tube-Pro — The Ultimate Hub</title>
 
 <!-- PWA -->
 <link rel="manifest" href="/manifest.json" />
@@ -12,21 +12,18 @@
 <!-- iOS / Safari -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="MIN-Tube-Slim" />
+<meta name="apple-mobile-web-app-title" content="MIN-Tube-Pro" />
 <link rel="apple-touch-icon" href="/min-img.png" />
 
 <!-- Android / OGP -->
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="application-name" content="MIN-Tube-Slim" />
-<meta property="og:title" content="MIN-Tube-Slim" />
+<meta name="application-name" content="MIN-Tube-Pro" />
+<meta property="og:title" content="MIN-Tube-Pro" />
 <meta property="og:description" content="次世代アプリランチャー — すべてを、この一箇所に。" />
 <meta property="og:image" content="/min-img.png" />
 
-<!-- 高速化: preconnect -->
-<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
-<link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 
 <style>
   :root {
@@ -61,6 +58,7 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* ── Background Mesh ── */
   .mesh-bg {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -123,10 +121,6 @@
     border: 2px solid rgba(255,255,255,0.1);
   }
 
-  .hero-content {
-    flex: 1;
-  }
-
   .hero-content h1 {
     font-size: 28px;
     font-weight: 800;
@@ -149,132 +143,6 @@
     color: var(--accent);
     font-weight: 600;
     letter-spacing: 0.5px;
-  }
-
-  /* ── 通知ベルボタン ── */
-  .hero-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-left: auto;
-  }
-
-  .notif-btn {
-    position: relative;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 50%;
-    width: 48px; height: 48px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    transition: var(--transition);
-    color: var(--text);
-    flex-shrink: 0;
-  }
-  .notif-btn:hover {
-    background: rgba(0,212,255,0.15);
-    border-color: var(--accent);
-    transform: scale(1.08);
-  }
-  .notif-btn svg { width: 22px; height: 22px; fill: currentColor; }
-
-  .notif-badge {
-    position: absolute;
-    top: 6px; right: 6px;
-    background: var(--red);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    min-width: 16px; height: 16px;
-    border-radius: 8px;
-    display: none;
-    align-items: center; justify-content: center;
-    padding: 0 3px;
-    box-shadow: 0 0 6px rgba(244,63,94,0.6);
-  }
-  .notif-badge.show { display: flex; }
-
-  /* ── 通知ドロップダウン ── */
-  .notif-dropdown {
-    position: absolute;
-    top: calc(100% + 12px);
-    right: 0;
-    width: 340px;
-    max-height: 420px;
-    background: rgba(10, 18, 38, 0.97);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 16px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-    z-index: 1000;
-    overflow: hidden;
-    display: none;
-    flex-direction: column;
-  }
-  .notif-dropdown.open { display: flex; }
-
-  .notif-header {
-    padding: 14px 18px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    font-weight: 700;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .notif-header span { color: var(--accent); font-size: 12px; cursor: pointer; }
-  .notif-header span:hover { text-decoration: underline; }
-
-  .notif-list {
-    overflow-y: auto;
-    flex: 1;
-    scrollbar-width: thin;
-  }
-
-  .notif-item {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    padding: 12px 18px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    cursor: pointer;
-    transition: background 0.15s;
-    text-decoration: none;
-    color: inherit;
-  }
-  .notif-item:hover { background: rgba(255,255,255,0.04); }
-
-  .notif-thumb {
-    width: 80px; height: 45px;
-    border-radius: 8px;
-    object-fit: cover;
-    flex-shrink: 0;
-    background: #111;
-  }
-  .notif-info { flex: 1; min-width: 0; }
-  .notif-channel { font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 2px; }
-  .notif-title { font-size: 12px; color: var(--text); line-height: 1.4;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .notif-new-dot {
-    width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0;
-    box-shadow: 0 0 6px var(--red);
-  }
-
-  .notif-empty {
-    padding: 40px 18px;
-    text-align: center;
-    color: var(--text-dim);
-    font-size: 13px;
-  }
-  .notif-loading {
-    padding: 24px;
-    text-align: center;
-    color: var(--text-dim);
-    font-size: 13px;
-  }
-
-  .notif-wrapper {
-    position: relative;
   }
 
   /* ── Legend & Filter ── */
@@ -306,30 +174,55 @@
   .dot.wip { background: var(--red); box-shadow: 0 0 8px var(--red); }
 
   /* ── Category Section ── */
-  .category-section { margin-bottom: 40px; }
+  .category-section {
+    margin-bottom: 40px;
+  }
+
   .category-header {
     display: flex;
     align-items: center;
     gap: 12px;
     margin-bottom: 20px;
   }
+
   .cat-icon {
     width: 36px; height: 36px;
     background: rgba(255,255,255,0.05);
     border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 18px;
   }
-  .cat-title { font-size: 18px; font-weight: 700; color: #fff; }
-  .cat-line { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.1), transparent); }
-  .cat-count { font-size: 12px; padding: 2px 10px; background: rgba(255,255,255,0.05); border-radius: 20px; color: var(--text-dim); }
 
-  /* ── Grid & Card ── */
+  .cat-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .cat-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.1), transparent);
+  }
+
+  .cat-count {
+    font-size: 12px;
+    padding: 2px 10px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    color: var(--text-dim);
+  }
+
+  /* ── Modern Grid Layout ── */
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 20px;
   }
+
+  /* ── Card Design ── */
   .card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
@@ -344,73 +237,141 @@
     gap: 16px;
     backdrop-filter: blur(10px);
   }
+
   .card:hover {
     transform: translateY(-8px) scale(1.01);
     background: rgba(30, 41, 59, 0.7);
     border-color: rgba(0, 212, 255, 0.3);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 212, 255, 0.1);
   }
-  .card-top { display: flex; gap: 16px; align-items: flex-start; }
+
+  .card-top {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
   .app-icon {
     width: 56px; height: 56px;
     background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 26px; flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
     transition: var(--transition);
   }
-  .card:hover .app-icon { transform: rotate(-5deg) scale(1.1); border-color: var(--accent); }
-  .app-info { flex: 1; }
-  .app-name {
-    font-size: 17px; font-weight: 700; color: #fff;
-    display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
-  }
-  .app-desc { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
-  .card-footer {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-top: auto; padding-top: 16px;
-    border-top: 1px solid rgba(255,255,255,0.05);
-  }
-  .app-path {
-    font-family: 'Syne', monospace; font-size: 11px;
-    background: rgba(0, 212, 255, 0.1); color: var(--accent);
-    padding: 4px 10px; border-radius: 6px; font-weight: 600;
-  }
-  .app-badge {
-    font-size: 10px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 1px; color: var(--text-dim);
-    padding: 3px 8px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
+
+  .card:hover .app-icon {
+    transform: rotate(-5deg) scale(1.1);
+    border-color: var(--accent);
   }
 
-  /* ── Pulse ── */
-  .status-indicator { width: 8px; height: 8px; border-radius: 50%; position: relative; }
+  .app-info {
+    flex: 1;
+  }
+
+  .app-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .app-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .app-path {
+    font-family: 'Syne', monospace;
+    font-size: 11px;
+    background: rgba(0, 212, 255, 0.1);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+
+  .app-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    padding: 3px 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+  }
+
+  /* ── Pulse Animation ── */
+  .status-indicator {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    position: relative;
+  }
   .status-indicator.done { background: var(--green); }
   .status-indicator.wip { background: var(--red); }
   .status-indicator.done::after {
     content: '';
-    position: absolute; inset: 0; border-radius: 50%;
-    background: var(--green); animation: pulse 2s infinite;
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
   }
   @keyframes pulse {
     0% { transform: scale(1); opacity: 0.8; }
     100% { transform: scale(3); opacity: 0; }
   }
 
+  /* ── Responsive ── */
   @media (max-width: 768px) {
-    header.hero { flex-direction: column; text-align: center; padding: 32px 20px; }
-    header.hero::before { width: 100%; height: 4px; background: linear-gradient(to right, var(--accent), var(--accent2)); }
+    header.hero {
+      flex-direction: column;
+      text-align: center;
+      padding: 32px 20px;
+    }
+    header.hero::before {
+      width: 100%; height: 4px;
+      background: linear-gradient(to right, var(--accent), var(--accent2));
+    }
     .logo-area { margin-right: 0; margin-bottom: 16px; }
-    .grid { grid-template-columns: 1fr; gap: 16px; }
-    .toolbar { flex-direction: column; align-items: center; gap: 12px; }
-    .notif-dropdown { width: 300px; right: -60px; }
-    .hero-actions { margin-left: 0; margin-top: 16px; }
+    .grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    .toolbar {
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
   }
 
+  /* Scrollbar Customization */
   ::-webkit-scrollbar { width: 8px; }
   ::-webkit-scrollbar-track { background: var(--bg-dark); }
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+  }
   ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
 </style>
 </head>
 <body>
@@ -425,32 +386,12 @@
     <!-- Hero Section -->
     <header class="hero">
       <div class="logo-area">
-        <img src="/min-img.png" alt="Logo" class="logo-img" loading="eager" decoding="async">
+        <img src="/min-img.png" alt="Logo" class="logo-img">
       </div>
       <div class="hero-content">
-        <h1>MIN‑Tube‑Slim</h1>
+        <h1>MIN‑Tube‑Pro</h1>
         <div class="typewriter-container">
           <div id="typewriter" class="typewriter"></div>
-        </div>
-      </div>
-      <div class="hero-actions">
-        <!-- 通知ベルボタン -->
-        <div class="notif-wrapper">
-          <button class="notif-btn" id="notifBtn" title="通知" aria-label="通知">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-            </svg>
-            <span class="notif-badge" id="notifBadge">0</span>
-          </button>
-          <div class="notif-dropdown" id="notifDropdown">
-            <div class="notif-header">
-              <span style="color:var(--text);font-size:14px;">🔔 新着通知</span>
-              <span id="markAllRead">すべて既読</span>
-            </div>
-            <div class="notif-list" id="notifList">
-              <div class="notif-loading">読み込み中…</div>
-            </div>
-          </div>
         </div>
       </div>
     </header>
@@ -470,7 +411,7 @@
         <div class="cat-icon">🎬</div>
         <h2 class="cat-title">Video Streaming</h2>
         <div class="cat-line"></div>
-        <div class="cat-count">1 App</div>
+        <div class="cat-count">3 Apps</div>
       </div>
       <div class="grid">
         <article class="card" data-endpoint="/">
@@ -478,12 +419,40 @@
             <div class="app-icon">▶️</div>
             <div class="app-info">
               <div class="app-name"><span class="status-indicator done"></span> Youtube‑Pro</div>
-              <p class="app-desc">MIN-Tube-Slimの中核。改善されたUIとサーバー処理で、最高級の視聴体験を提供します。</p>
+              <p class="app-desc">MIN-Tube2の進化系。改善されたUIとサーバー処理で、最高級の視聴体験を提供します。</p>
             </div>
           </div>
           <div class="card-footer">
             <span class="app-path">/</span>
             <span class="app-badge">Main</span>
+          </div>
+        </article>
+
+        <article class="card" data-endpoint="/dl-pro">
+          <div class="card-top">
+            <div class="app-icon">⚡</div>
+            <div class="app-info">
+              <div class="app-name"><span class="status-indicator done"></span> STUDY2525</div>
+              <p class="app-desc">平均0.02秒の超高速ロード。究極のYoutube代替インスタンスをHTML1枚で実現。</p>
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="app-path">/dl-pro</span>
+            <span class="app-badge">Ultra-Fast</span>
+          </div>
+        </article>
+
+        <article class="card" data-endpoint="/k-tube">
+          <div class="card-top">
+            <div class="app-icon">🤩</div>
+            <div class="app-info">
+              <div class="app-name"><span class="status-indicator done"></span> K‑tube</div>
+              <p class="app-desc">KA1121Studio様開発。高速レスポンスに特化したYoutube視聴フロントエンド。</p>
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="app-path">/k-tube</span>
+            <span class="app-badge">High-Speed</span>
           </div>
         </article>
       </div>
@@ -589,6 +558,7 @@
             <span class="app-badge">Lightweight</span>
           </div>
         </article>
+
       </div>
     </section>
 
@@ -620,7 +590,7 @@
             <div class="app-icon">🔌</div>
             <div class="app-info">
               <div class="app-name"><span class="status-indicator done"></span> API Portal</div>
-              <p class="app-desc">MIN-Tube-Slim の全 API を一覧・検索・ライブテストできる公式ポータル。認証不要ですぐ利用可能。</p>
+              <p class="app-desc">MIN-Tube-Pro の全 API を一覧・検索・ライブテストできる公式ポータル。認証不要ですぐ利用可能。</p>
             </div>
           </div>
           <div class="card-footer">
@@ -632,7 +602,7 @@
     </section>
 
     <footer style="text-align: center; margin-top: 40px; color: var(--text-dim); font-size: 13px;">
-      <p>&copy; 2026 MIN-Tube-Slim Project. Select an application to launch.</p>
+      <p>&copy; 2026 MIN-Tube-Pro Project. Select an application to launch.</p>
     </footer>
 
   </div>
@@ -657,13 +627,21 @@
         el.textContent = current.substring(0, cIdx + 1);
         cIdx++;
       }
+
       let speed = isDeleting ? 40 : 80;
-      if (!isDeleting && cIdx === current.length) { speed = 2500; isDeleting = true; }
-      else if (isDeleting && cIdx === 0) { isDeleting = false; pIdx = (pIdx + 1) % phrases.length; speed = 500; }
+      if (!isDeleting && cIdx === current.length) {
+        speed = 2500;
+        isDeleting = true;
+      } else if (isDeleting && cIdx === 0) {
+        isDeleting = false;
+        pIdx = (pIdx + 1) % phrases.length;
+        speed = 500;
+      }
       setTimeout(type, speed);
     }
+    window.onload = type;
 
-    // ── Card Navigation ──
+    // ── Secure Navigation ──
     document.querySelectorAll('.card').forEach(card => {
       const run = () => {
         const url = card.getAttribute('data-endpoint');
@@ -681,142 +659,6 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
-
-    // ── 通知システム ──
-    const notifBtn = document.getElementById('notifBtn');
-    const notifDropdown = document.getElementById('notifDropdown');
-    const notifBadge = document.getElementById('notifBadge');
-    const notifList = document.getElementById('notifList');
-    const markAllRead = document.getElementById('markAllRead');
-
-    let notifItems = [];
-    let notifOpen = false;
-
-    // 登録チャンネル一覧をlocalStorageから取得
-    function getSubscribedChannels() {
-      const channels = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('subscribed_') && localStorage.getItem(key) === 'true') {
-          channels.push(key.replace('subscribed_', ''));
-        }
-      }
-      return channels;
-    }
-
-    // 通知をチェック
-    async function checkNotifications() {
-      const channels = getSubscribedChannels();
-      if (channels.length === 0) {
-        notifList.innerHTML = '<div class="notif-empty">📭 登録チャンネルがありません<br><small style="margin-top:6px;display:block;">動画ページの「チャンネル登録」から追加できます</small></div>';
-        return;
-      }
-
-      notifList.innerHTML = '<div class="notif-loading">新着を確認中…</div>';
-      notifItems = [];
-
-      const results = await Promise.allSettled(
-        channels.map(async ch => {
-          try {
-            const res = await fetch(`/api/channel-latest?name=${encodeURIComponent(ch)}`, { signal: AbortSignal.timeout(5000) });
-            if (!res.ok) return null;
-            const data = await res.json();
-            if (!data || !data.id) return null;
-            const lastSeen = localStorage.getItem('lastseen_' + ch);
-            const isNew = lastSeen !== data.id;
-            return { channel: ch, ...data, isNew };
-          } catch { return null; }
-        })
-      );
-
-      notifItems = results
-        .filter(r => r.status === 'fulfilled' && r.value)
-        .map(r => r.value)
-        .sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
-
-      const newCount = notifItems.filter(n => n.isNew).length;
-      if (newCount > 0) {
-        notifBadge.textContent = newCount > 9 ? '9+' : newCount;
-        notifBadge.classList.add('show');
-      } else {
-        notifBadge.classList.remove('show');
-      }
-
-      renderNotifList();
-    }
-
-    function renderNotifList() {
-      if (notifItems.length === 0) {
-        notifList.innerHTML = '<div class="notif-empty">📭 新着動画はありません</div>';
-        return;
-      }
-      notifList.innerHTML = notifItems.map(item => `
-        <a class="notif-item" href="/video/${item.id}">
-          <img class="notif-thumb" src="https://i.ytimg.com/vi/${item.id}/mqdefault.jpg" loading="lazy" alt="">
-          <div class="notif-info">
-            <div class="notif-channel">@${item.channel}</div>
-            <div class="notif-title">${item.title || '新着動画'}</div>
-          </div>
-          ${item.isNew ? '<span class="notif-new-dot" title="未読"></span>' : ''}
-        </a>
-      `).join('');
-
-      // クリック時に既読にする
-      notifList.querySelectorAll('.notif-item').forEach((el, i) => {
-        el.addEventListener('click', () => {
-          const item = notifItems[i];
-          if (item) localStorage.setItem('lastseen_' + item.channel, item.id);
-        });
-      });
-    }
-
-    // すべて既読
-    markAllRead.addEventListener('click', () => {
-      notifItems.forEach(item => {
-        localStorage.setItem('lastseen_' + item.channel, item.id);
-        item.isNew = false;
-      });
-      notifBadge.classList.remove('show');
-      renderNotifList();
-    });
-
-    // ドロップダウン開閉
-    notifBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      notifOpen = !notifOpen;
-      notifDropdown.classList.toggle('open', notifOpen);
-      if (notifOpen && notifItems.length === 0) checkNotifications();
-    });
-
-    document.addEventListener('click', e => {
-      if (!e.target.closest('.notif-wrapper')) {
-        notifOpen = false;
-        notifDropdown.classList.remove('open');
-      }
-    });
-
-    // ページ読み込み後に通知バッジ件数だけ更新（軽量チェック）
-    function quickBadgeCheck() {
-      const channels = getSubscribedChannels();
-      if (channels.length === 0) return;
-      let newCount = 0;
-      channels.forEach(ch => {
-        const lastSeen = localStorage.getItem('lastseen_' + ch);
-        // 一度も見ていないチャンネルは新着扱いでバッジ表示
-        if (!lastSeen) newCount++;
-      });
-      if (newCount > 0) {
-        notifBadge.textContent = newCount > 9 ? '9+' : newCount;
-        notifBadge.classList.add('show');
-      }
-    }
-
-    window.addEventListener('load', () => {
-      type();
-      quickBadgeCheck();
-      // バックグラウンドで通知チェック（5秒後）
-      setTimeout(checkNotifications, 5000);
-    });
   </script>
 </body>
 </html>
