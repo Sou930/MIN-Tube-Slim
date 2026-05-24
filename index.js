@@ -30,9 +30,6 @@ const keys = [
   process.env.RAPIDAPI_KEY_3 || '41c9265bc6msha0fa7dfc1a63eabp18bf7cjsne6ef10b79b38'
 ];
 
-const PROXY_DIR = path.join(__dirname, 'proxy');
-
-
 app.use(express.static(path.join(__dirname, "public")));
 app.use(cookieParser());
 
@@ -258,178 +255,23 @@ app.get("/api/trending", async (req, res) => {
 });
 
 
-// ── Search Backends ──
-// Study2525 / K-Tube は再生方法ではなく、検索・動画取得のバックエンドとして利用する
-const STUDY2525_BASE = 'https://study2525.glitch.me'; // Study2525 (旧 dl-pro) - 検索/動画取得ソース
-const KTUBE_BASE     = 'https://k-tube-for-public-release-2.vercel.app'; // K-Tube - 検索/動画取得ソース
-
-// Study2525 から検索結果を取得（互換性のある形に正規化）
-async function searchViaStudy2525(query, page = 0) {
-  try {
-    // Invidious 互換 API（K-Tube/Study2525 は内部で Invidious 系プロキシを利用）
-    const url = `${STUDY2525_BASE}/api/v1/search?q=${encodeURIComponent(query)}&page=${parseInt(page) + 1}`;
-    const r = await fetchWithTimeout(url, {}, 4000);
-    if (!r.ok) return [];
-    const data = await r.json();
-    if (!Array.isArray(data)) return [];
-    return data.map(it => {
-      if (it.type === 'video') {
-        return {
-          id: it.videoId,
-          type: 'video',
-          title: it.title,
-          channelTitle: it.author,
-          channelId: it.authorId,
-          thumbnail: it.videoThumbnails,
-          lengthText: it.lengthSeconds ? `${Math.floor(it.lengthSeconds/60)}:${String(it.lengthSeconds%60).padStart(2,'0')}` : '',
-          viewCountText: it.viewCountText || (it.viewCount ? `${it.viewCount.toLocaleString()} 回視聴` : ''),
-          publishedTimeText: it.publishedText || '',
-          _source: 'study2525'
-        };
-      } else if (it.type === 'channel') {
-        return {
-          id: it.authorId,
-          type: 'channel',
-          title: it.author,
-          channelTitle: it.author,
-          thumbnail: it.authorThumbnails,
-          subCount: it.subCount || 0,
-          subCountText: it.subCountText || '',
-          videoCount: it.videoCount || 0,
-          description: it.description || '',
-          _source: 'study2525'
-        };
-      } else if (it.type === 'playlist') {
-        return {
-          id: it.playlistId,
-          type: 'playlist',
-          title: it.title,
-          channelTitle: it.author,
-          channelId: it.authorId,
-          thumbnail: it.playlistThumbnail ? [{url: it.playlistThumbnail}] : (it.videos && it.videos[0] ? [{url: it.videos[0].videoThumbnails?.[0]?.url}] : []),
-          videoCount: it.videoCount || 0,
-          length: it.videoCount || 0,
-          _source: 'study2525'
-        };
-      }
-      return null;
-    }).filter(Boolean);
-  } catch (e) {
-    return [];
-  }
-}
-
-// K-Tube からも同じく検索（Invidious API 互換のあるバックエンド経由）
-async function searchViaKTube(query, page = 0) {
-  try {
-    const url = `${KTUBE_BASE}/api/search?q=${encodeURIComponent(query)}&page=${page}`;
-    const r = await fetchWithTimeout(url, {}, 4000);
-    if (!r.ok) return [];
-    const data = await r.json();
-    const items = data.items || data.results || (Array.isArray(data) ? data : []);
-    if (!Array.isArray(items)) return [];
-    return items.map(it => {
-      const type = it.type || (it.videoId ? 'video' : it.playlistId ? 'playlist' : it.channelId ? 'channel' : 'video');
-      if (type === 'video') {
-        return {
-          id: it.videoId || it.id,
-          type: 'video',
-          title: it.title,
-          channelTitle: it.author || it.channelTitle,
-          thumbnail: it.thumbnails || it.thumbnail || (it.videoId ? [{url: `https://i.ytimg.com/vi/${it.videoId}/mqdefault.jpg`}] : []),
-          lengthText: it.lengthText || it.duration || '',
-          viewCountText: it.viewCountText || '',
-          publishedTimeText: it.publishedText || '',
-          _source: 'ktube'
-        };
-      } else if (type === 'channel') {
-        return {
-          id: it.channelId || it.id,
-          type: 'channel',
-          title: it.title || it.author,
-          channelTitle: it.title || it.author,
-          thumbnail: it.thumbnails || it.thumbnail || [],
-          subCountText: it.subCountText || '',
-          videoCount: it.videoCount || 0,
-          description: it.description || '',
-          _source: 'ktube'
-        };
-      } else if (type === 'playlist') {
-        return {
-          id: it.playlistId || it.id,
-          type: 'playlist',
-          title: it.title,
-          channelTitle: it.author || it.channelTitle,
-          thumbnail: it.thumbnails || it.thumbnail || [],
-          videoCount: it.videoCount || 0,
-          length: it.videoCount || 0,
-          _source: 'ktube'
-        };
-      }
-      return null;
-    }).filter(Boolean);
-  } catch (e) {
-    return [];
-  }
-}
-
 app.get("/api/search", async (req, res, next) => {
   const query = req.query.q;
   const page = parseInt(req.query.page) || 0;
-  const includeAll = req.query.includeAll !== 'false'; // デフォルトで動画/チャンネル/プレイリスト全部
   if (!query) return res.status(400).json({ error: "Query required" });
   try {
-    // メインは youtube-search-api。withPlaylist=true で playlist 型もそのまま含めて取得
-    const [ytsRes, s2525, ktube] = await Promise.allSettled([
-      yts.GetListByKeyword(query, true, 25, page),
-      includeAll && page === 0 ? searchViaStudy2525(query, page) : Promise.resolve([]),
-      includeAll && page === 0 ? searchViaKTube(query, page) : Promise.resolve([])
-    ]);
+    // メインは youtube-search-api のみ。withPlaylist=true で playlist 型もそのまま含めて取得。
+    // 読み込みを最大限高速化するため、外部バックエンドへのフォローアップ問い合わせは行わない。
+    const ytsRes = await yts.GetListByKeyword(query, true, 25, page);
+    const items = (ytsRes && ytsRes.items) || [];
 
-    const main = ytsRes.status === 'fulfilled' ? (ytsRes.value.items || []) : [];
-    const sup1 = s2525.status === 'fulfilled' ? s2525.value : [];
-    const sup2 = ktube.status === 'fulfilled' ? ktube.value : [];
+    // チャンネル画像を videoRenderer から補完（キャッシュ有り・タイムアウト短め）
+    try { await enrichItemsWithChannelMeta(items, query); } catch (e) {}
 
-    // 統合 + 重複排除（id+type 単位）
-    const seen = new Set();
-    const merged = [];
-    for (const list of [main, sup1, sup2]) {
-      for (const it of list) {
-        if (!it || !it.id) continue;
-        const key = (it.type || 'video') + ':' + it.id;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        merged.push(it);
-      }
-    }
-
-    // v1.3.0: チャンネル画像が表示されないバグ修正 — videoRenderer から
-    // channelThumbnail / channelId / viewCountText / publishedTimeText を補完
-    try { await enrichItemsWithChannelMeta(merged, query); } catch (e) {}
-
-    // YouTube 標準の検索結果順を維持するため、merged はそのまま返す
-    res.json({ items: merged, nextPage: ytsRes.status === 'fulfilled' ? ytsRes.value.nextPage : null });
+    res.json({ items, nextPage: ytsRes ? ytsRes.nextPage : null });
   } catch (err) { next(err); }
 });
 
-// ── Study2525 / K-Tube 経由の動画情報取得（フォールバック用）──
-app.get('/api/source/study2525/:id', async (req, res) => {
-  try {
-    const r = await fetchWithTimeout(`${STUDY2525_BASE}/api/v1/videos/${req.params.id}`, {}, 5000);
-    if (!r.ok) return res.status(r.status).json({ error: 'upstream' });
-    const data = await r.json();
-    res.json(data);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/source/ktube/:id', async (req, res) => {
-  try {
-    const r = await fetchWithTimeout(`${KTUBE_BASE}/api/info?v=${req.params.id}`, {}, 5000);
-    if (!r.ok) return res.status(r.status).json({ error: 'upstream' });
-    const data = await r.json();
-    res.json(data);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
 
 // ── プレイリスト ──
 app.get('/api/playlist/:id', async (req, res) => {
@@ -438,23 +280,6 @@ app.get('/api/playlist/:id', async (req, res) => {
     const result = await yts.GetPlaylistData(playlistId, 100);
     res.json(result);
   } catch (e) {
-    // Study2525 / K-Tube にフォールバック
-    try {
-      const r = await fetchWithTimeout(`${STUDY2525_BASE}/api/v1/playlists/${playlistId}`, {}, 5000);
-      if (r.ok) {
-        const data = await r.json();
-        return res.json({
-          items: (data.videos || []).map(v => ({
-            id: v.videoId,
-            title: v.title,
-            channelTitle: v.author,
-            thumbnail: v.videoThumbnails,
-            lengthText: v.lengthSeconds ? `${Math.floor(v.lengthSeconds/60)}:${String(v.lengthSeconds%60).padStart(2,'0')}` : ''
-          })),
-          metadata: { title: data.title, author: data.author }
-        });
-      }
-    } catch (e2) {}
     res.json({ items: [], metadata: {} });
   }
 });
@@ -593,55 +418,10 @@ for (const apiBase of apiListCache) {
         .then(res => res.ok ? res.json() : Promise.reject())
         .then(data => data.stream_url ? data : Promise.reject()),
 
-      // Study2525 を動画取得バックエンドとして利用（Invidious 互換）
-      fetchWithTimeout(`${STUDY2525_BASE}/api/v1/videos/${videoId}`, {}, 5000)
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(d => {
-          const fmt = (d.adaptiveFormats || []).concat(d.formatStreams || []);
-          const muxed = (d.formatStreams || []).find(f => /mp4/i.test(f.container || f.type || ''));
-          const stream = muxed?.url || fmt[0]?.url;
-          if (!stream) return Promise.reject();
-          return {
-            stream_url: stream,
-            videoTitle: d.title,
-            channelName: d.author,
-            channelImage: d.authorThumbnails?.[d.authorThumbnails.length-1]?.url || '',
-            videoViews: d.viewCount ? `${d.viewCount.toLocaleString()}` : '',
-            videoDes: d.description || '',
-            likeCount: d.likeCount || 0
-          };
-        }),
-
-      new Promise((resolve, reject) => {
-        setTimeout(() => {
-          fetchWithTimeout(`${protocol}://${host}/ai-fetch/${videoId}`, {}, 5000)
-            .then(res => res.ok ? res.json() : Promise.reject())
-            .then(data => data.stream_url ? resolve(data) : reject())
-            .catch(reject);
-        }, 2000);
-      }),
-
-      // K-Tube も並行フォールバック
-      new Promise((resolve, reject) => {
-        setTimeout(() => {
-          fetchWithTimeout(`${KTUBE_BASE}/api/info?v=${videoId}`, {}, 5000)
-            .then(r => r.ok ? r.json() : Promise.reject())
-            .then(d => {
-              const stream = d.stream_url || d.url || (d.formats && d.formats[0]?.url);
-              if (!stream) return reject();
-              resolve({
-                stream_url: stream,
-                videoTitle: d.title || d.videoTitle,
-                channelName: d.author || d.channelName,
-                channelImage: d.channelImage || '',
-                videoViews: d.viewCount || d.videoViews || '',
-                videoDes: d.description || d.videoDes || '',
-                likeCount: d.likeCount || 0
-              });
-            })
-            .catch(reject);
-        }, 2500);
-      })
+      // 読み込み高速化のため、ai-fetch も遅延なしで並行リクエスト（一番速い応答を採用）
+      fetchWithTimeout(`${protocol}://${host}/ai-fetch/${videoId}`, {}, 5000)
+        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(data => data.stream_url ? data : Promise.reject())
     ]);
 
 
@@ -1027,7 +807,6 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
                         <div class="server-option" onclick="changeServer('YoutubeEdu-Kahoot', '/kahoot-edu/${videoId}', event)">YoutubeEdu-Kahoot</div>
                         <div class="server-option" onclick="changeServer('YoutubeEdu-Scratch', '/scratch-edu/${videoId}', event)">YoutubeEdu-Scratch</div>
                         <div class="server-option" onclick="changeServer('Youtube-Pro', '/pro-stream/${videoId}', event)">Youtube-Pro</div>
-                        <div class="server-option" onclick="changeServer('Elixir-Network', '/stream-network/${videoId}', event)">Elixir-Network</div>
                     </div>
                 </div>
             </div>
@@ -1133,7 +912,7 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
             }
 
             const playerContainer = document.getElementById('playerWrapper');
-            const forceIframe = ['YoutubeEdu-Kahoot', 'YoutubeEdu-Scratch', 'Youtube-Pro', 'youtube-nocookie', 'Elixir-Network'].includes(serverName);
+            const forceIframe = ['YoutubeEdu-Kahoot', 'YoutubeEdu-Scratch', 'Youtube-Pro', 'youtube-nocookie'].includes(serverName);
             const isIframe = forceIframe || newUrl.includes('embed');
 
             let playerHtml = '';
@@ -1207,8 +986,7 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
             'DL-Pro':             '/360/${videoId}',
             'YoutubeEdu-Kahoot':  '/kahoot-edu/${videoId}',
             'YoutubeEdu-Scratch': '/scratch-edu/${videoId}',
-            'Youtube-Pro':        '/pro-stream/${videoId}',
-            'Elixir-Network': '/elixir-stream/${videoId}'
+            'Youtube-Pro':        '/pro-stream/${videoId}'
         };
         const serverName = serverEndpoints.hasOwnProperty(savedMode) ? savedMode : 'googlevideo';
         const endpointPath = serverEndpoints[serverName];
@@ -1384,24 +1162,6 @@ app.get('/kahoot-edu/:id', async (req, res) => {
 app.get('/nocookie/:id', (req, res) => {
   const id = req.params.id;
   const url = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`;
-  res.set('Content-Type', 'text/plain; charset=utf-8');
-  res.send(url);
-});
-
-// ── Study2525 Fast Server ──
-// 既存の /dl-pro (study2525.html) をiframe再生用に流用してロード短縮
-app.get('/study2525-stream/:id', (req, res) => {
-  const id = req.params.id;
-  const url = `/dl-pro?v=${id}&autoplay=1&embed=1`;
-  res.set('Content-Type', 'text/plain; charset=utf-8');
-  res.send(url);
-});
-
-// ── K-Tube Fast Server ──
-// KA1121Studio製 K-Tube インスタンスを動画サーバーとして利用
-app.get('/ktube-stream/:id', (req, res) => {
-  const id = req.params.id;
-  const url = `https://k-tube-for-public-release-2.vercel.app/watch?v=${id}&autoplay=1`;
   res.set('Content-Type', 'text/plain; charset=utf-8');
   res.send(url);
 });
@@ -2803,19 +2563,6 @@ app.get("/img/:videoId", (req, res) => {
     });
 });
 
-app.get('/stream-network/:videoId', (req, res) => {
-    const videoId = req.params.videoId;
-    
-    const host = req.get('host');
-    
-    // 強制的にhttpsURLスキームを返すためhttpしか対応していないとエラーを返します。。
-    const baseUrl = `https://${host}`;
-    
-    const responseText = `${baseUrl}/proxy/embed.html#https://www.youtube-nocookie.com/embed/${videoId}`;
-    
-    res.send(responseText);
-});
-
 app.get("/abyss.png", (req, res) => {
   const filePath = path.join(__dirname, "img", "abyss.png");
   res.sendFile(filePath);
@@ -3004,34 +2751,6 @@ app.get("/short-check/:id", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ error: "Internal Server Error" });
   }
-});
-
-
-/**
- * PROXY_DIR/
- * ├── uv/ (sw.js, uv.bundle.js, etc.)
- * └── prxy/
- *     ├── baremux/ (index.js, worker.js, etc.)
- *     ├── epoxy/ (index.js, etc.)
- *     ├── libcurl/ (index.js, etc.)
- *     └── register-sw.mjs
- */
-app.use('/proxy', express.static(PROXY_DIR));
-app.use((req, res, next) => {
-    if (res.headersSent) return next();
-
-    const targetPath = path.join(PROXY_DIR, req.path);
-    const normalizedPath = path.normalize(targetPath);
-
-    if (!normalizedPath.startsWith(PROXY_DIR)) {
-        return next();
-    }
-
-    if (fs.existsSync(targetPath) && fs.lstatSync(targetPath).isFile()) {
-        return res.sendFile(targetPath);
-    }
-
-    next();
 });
 
 
