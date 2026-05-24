@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>MIN-Tube-Pro — The Ultimate Hub</title>
+<title>MIN-Tube-Slim — The Ultimate Hub</title>
 
 <!-- PWA -->
 <link rel="manifest" href="/manifest.json" />
@@ -12,18 +12,24 @@
 <!-- iOS / Safari -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="MIN-Tube-Pro" />
+<meta name="apple-mobile-web-app-title" content="MIN-Tube-Slim" />
 <link rel="apple-touch-icon" href="/min-img.png" />
 
 <!-- Android / OGP -->
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="application-name" content="MIN-Tube-Pro" />
-<meta property="og:title" content="MIN-Tube-Pro" />
+<meta name="application-name" content="MIN-Tube-Slim" />
+<meta property="og:title" content="MIN-Tube-Slim" />
 <meta property="og:description" content="次世代アプリランチャー — すべてを、この一箇所に。" />
 <meta property="og:image" content="/min-img.png" />
 
+<!-- 高速読み込み: 早期接続 + ノンブロッキング フォント読み込み -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="https://fonts.googleapis.com">
+<link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
 
 <style>
   :root {
@@ -590,7 +596,7 @@
             <div class="app-icon">🔌</div>
             <div class="app-info">
               <div class="app-name"><span class="status-indicator done"></span> API Portal</div>
-              <p class="app-desc">MIN-Tube-Pro の全 API を一覧・検索・ライブテストできる公式ポータル。認証不要ですぐ利用可能。</p>
+              <p class="app-desc">MIN-Tube-Slim の全 API を一覧・検索・ライブテストできる公式ポータル。認証不要ですぐ利用可能。</p>
             </div>
           </div>
           <div class="card-footer">
@@ -602,7 +608,7 @@
     </section>
 
     <footer style="text-align: center; margin-top: 40px; color: var(--text-dim); font-size: 13px;">
-      <p>&copy; 2026 MIN-Tube-Pro Project. Select an application to launch.</p>
+      <p>&copy; 2026 MIN-Tube-Slim Project. Select an application to launch.</p>
     </footer>
 
   </div>
