@@ -94,43 +94,53 @@
 
     /* ===== Hero ===== */
     .hero{
-      max-width:1240px;margin:0 auto;padding:36px 24px 8px;
-      display:grid;grid-template-columns:1.4fr 1fr;gap:28px;align-items:center;
+      max-width:1240px;margin:0 auto;padding:40px 24px 10px;
+      display:grid;grid-template-columns:1.4fr 1fr;gap:32px;align-items:center;
     }
     .hero-inner h1{
-      font-size:clamp(28px,4.2vw,42px);
-      line-height:1.15;letter-spacing:-.02em;font-weight:700;margin-bottom:14px;
+      font-size:clamp(28px,4.2vw,44px);
+      line-height:1.12;letter-spacing:-.025em;font-weight:700;margin-bottom:14px;
     }
     .hero-inner h1 .grad{
       background:linear-gradient(90deg,#3ea6ff,#a78bfa,#22d3ee);
       -webkit-background-clip:text;background-clip:text;color:transparent;
     }
-    .hero-inner p{color:var(--text-muted);font-size:16px;line-height:1.6;max-width:60ch}
-    .hero-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+    .hero-inner p{color:var(--text-muted);font-size:16px;line-height:1.65;max-width:60ch}
+    .hero-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
     .pill{
       display:inline-flex;align-items:center;gap:6px;
       padding:6px 12px;border-radius:999px;
       background:var(--surface-2);color:var(--text);font-size:12px;
       border:1px solid var(--border-soft);
+      transition:border-color .15s ease, background .15s ease;
     }
+    .pill:hover{border-color:var(--border)}
     .pill .dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 0 4px rgba(34,197,94,.18)}
     .pill.warn .dot{background:var(--warn);box-shadow:0 0 0 4px rgba(245,158,11,.18)}
     .pill.danger .dot{background:var(--danger);box-shadow:0 0 0 4px rgba(239,68,68,.18)}
 
     .hero-card{
-      background:linear-gradient(160deg,rgba(62,166,255,.10),rgba(167,139,250,.08) 60%,transparent);
+      background:
+        linear-gradient(160deg,rgba(62,166,255,.12),rgba(167,139,250,.09) 55%,rgba(34,211,238,.06) 100%);
       border:1px solid var(--border-soft);
       border-radius:var(--radius);
-      padding:18px;
-      backdrop-filter:blur(6px);
+      padding:20px;
+      backdrop-filter:blur(8px);
+      position:relative;overflow:hidden;
     }
-    .hero-card .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-    .hero-card .label{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+    .hero-card::after{
+      content:'';position:absolute;top:-40%;right:-30%;width:60%;height:140%;
+      background:radial-gradient(circle,rgba(167,139,250,.18),transparent 70%);
+      pointer-events:none;
+    }
+    .hero-card .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;position:relative;z-index:1}
+    .hero-card .label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.09em;font-weight:600}
     .hero-card .base{
       font-family:var(--mono);font-size:14px;color:var(--text);
       background:var(--surface-2);border:1px solid var(--border-soft);
       padding:10px 12px;border-radius:var(--radius-sm);
       display:flex;align-items:center;justify-content:space-between;gap:10px;word-break:break-all;
+      position:relative;z-index:1;
     }
     .copy-btn{
       background:var(--accent);color:#fff;border:none;
@@ -142,20 +152,31 @@
 
     /* ===== Stats grid ===== */
     .stats{
-      max-width:1240px;margin:18px auto 0;padding:0 24px;
+      max-width:1240px;margin:20px auto 0;padding:0 24px;
       display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
     }
     .stat{
       background:var(--surface);border:1px solid var(--border-soft);
       border-radius:var(--radius-sm);padding:14px 16px;
+      transition:border-color .15s ease, transform .15s ease;
+      position:relative;overflow:hidden;
     }
-    .stat .val{font-size:22px;font-weight:700;letter-spacing:-.02em}
-    .stat .lbl{font-size:12px;color:var(--text-muted);margin-top:2px}
+    .stat:hover{border-color:var(--border);transform:translateY(-1px)}
+    .stat::before{
+      content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+      background:linear-gradient(180deg,var(--accent),transparent);
+      opacity:.5;
+    }
+    .stat .val{font-size:24px;font-weight:700;letter-spacing:-.025em}
+    .stat .lbl{font-size:11px;color:var(--text-muted);margin-top:3px;text-transform:uppercase;letter-spacing:.04em;font-weight:500}
 
     /* ===== Toolbar ===== */
     .toolbar{
-      max-width:1240px;margin:28px auto 12px;padding:0 24px;
+      max-width:1240px;margin:28px auto 12px;padding:12px 24px;
       display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+      position:sticky;top:var(--header-h);z-index:20;
+      background:linear-gradient(180deg,var(--bg) 70%,transparent);
+      backdrop-filter:blur(6px);
     }
     .search-box{
       flex:1;min-width:220px;display:flex;align-items:center;gap:8px;
@@ -182,35 +203,42 @@
     /* ===== Endpoints ===== */
     .endpoints{
       max-width:1240px;margin:12px auto 60px;padding:0 24px;
-      display:grid;grid-template-columns:1fr;gap:14px;
+      display:grid;grid-template-columns:1fr;gap:12px;
     }
     .card{
       background:var(--surface);border:1px solid var(--border-soft);
       border-radius:var(--radius);
-      overflow:hidden;transition:border-color .15s,transform .15s;
+      overflow:hidden;
+      transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease;
     }
-    .card:hover{border-color:var(--border)}
+    .card:hover{border-color:var(--border);box-shadow:0 4px 16px rgba(0,0,0,.18)}
+    .card.open{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-soft)}
     .card-head{
       display:flex;align-items:center;gap:10px;padding:14px 18px;cursor:pointer;
       user-select:none;flex-wrap:wrap;
+      transition:background .12s ease;
     }
+    .card-head:hover{background:rgba(255,255,255,.02)}
+    body.light-mode .card-head:hover{background:rgba(0,0,0,.02)}
     .method{
-      font-family:var(--mono);font-weight:600;font-size:11px;letter-spacing:.06em;
-      padding:4px 8px;border-radius:6px;color:#fff;flex-shrink:0;
+      font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.06em;
+      padding:5px 9px;border-radius:6px;color:#fff;flex-shrink:0;min-width:54px;text-align:center;
+      box-shadow:0 1px 2px rgba(0,0,0,.18);
     }
-    .method.GET{background:#16a34a}
-    .method.POST{background:#2563eb}
-    .method.PUT{background:#d97706}
-    .method.DELETE{background:#dc2626}
-    .path{font-family:var(--mono);font-size:14px;color:var(--text);flex:1;min-width:0;word-break:break-all}
-    .desc{font-size:13px;color:var(--text-muted);width:100%;margin-top:2px;line-height:1.5}
+    .method.GET{background:linear-gradient(180deg,#16a34a,#15803d)}
+    .method.POST{background:linear-gradient(180deg,#2563eb,#1d4ed8)}
+    .method.PUT{background:linear-gradient(180deg,#d97706,#b45309)}
+    .method.DELETE{background:linear-gradient(180deg,#dc2626,#b91c1c)}
+    .path{font-family:var(--mono);font-size:14px;color:var(--text);flex:1;min-width:0;word-break:break-all;font-weight:500}
+    .desc{font-size:13px;color:var(--text-muted);width:100%;margin-top:4px;line-height:1.55;padding-left:64px}
     .badge{
-      font-size:10px;padding:2px 8px;border-radius:999px;
+      font-size:10px;padding:3px 9px;border-radius:999px;
       background:var(--accent-soft);color:var(--accent);
       font-weight:600;letter-spacing:.04em;text-transform:uppercase;
     }
     .badge.beta{background:rgba(245,158,11,.14);color:#f59e0b}
     .badge.stable{background:rgba(34,197,94,.14);color:#22c55e}
+    .badge.new{background:rgba(167,139,250,.16);color:#a78bfa}
     .chev{
       margin-left:auto;transition:transform .2s;color:var(--text-muted);
     }
@@ -298,6 +326,7 @@
       .brand .sub{display:none}
       .hero{padding:18px 16px 0}
       .toolbar,.endpoints,footer{padding-left:16px;padding-right:16px}
+      .desc{padding-left:0}
     }
 
     /* ===== Toast ===== */
@@ -351,9 +380,10 @@
       <p>MIN-Tube-Slim が提供するパブリック API の一覧、仕様、サンプル、そしてブラウザ上での<strong>ライブテスト機能</strong>を備えた公式ポータルです。認証は不要、すぐに使い始められます。</p>
       <div class="hero-meta">
         <span class="pill"><span class="dot"></span>ステータス: 稼働中</span>
-        <span class="pill">バージョン v1.4.7</span>
+        <span class="pill">バージョン v1.4.0</span>
         <span class="pill">レート制限: 60req / min (目安)</span>
         <span class="pill">CORS: 同一オリジン</span>
+        <span class="pill" id="latencyPill" title="API レスポンス遅延">⚡ —</span>
       </div>
     </div>
     <div class="hero-card">
@@ -376,7 +406,7 @@
     <div class="stat"><div class="val" id="stat-total">0</div><div class="lbl">公開エンドポイント</div></div>
     <div class="stat"><div class="val" id="stat-get">0</div><div class="lbl">GET メソッド</div></div>
     <div class="stat"><div class="val" id="stat-post">0</div><div class="lbl">POST メソッド</div></div>
-    <div class="stat"><div class="val">JSON</div><div class="lbl">レスポンス形式</div></div>
+    <div class="stat"><div class="val" id="stat-new">0</div><div class="lbl">新規 API</div></div>
   </section>
 
   <!-- TOOLBAR -->
@@ -392,6 +422,8 @@
       <button class="chip" data-filter="video">動画</button>
       <button class="chip" data-filter="search">検索</button>
       <button class="chip" data-filter="channel">チャンネル</button>
+      <button class="chip" data-filter="meta">メタ情報</button>
+      <button class="chip" data-filter="system">システム</button>
     </div>
   </section>
 
@@ -453,6 +485,55 @@
           {name:"keywords",type:"string[]",req:false,desc:"関連キーワード (カンマ区切り)"}
         ],
         sample:"/api/recommendations?channels=YOASOBI&keywords=music"
+      },
+      {
+        method:"GET",
+        path:"/api/suggest",
+        title:"検索サジェスト",
+        desc:"YouTube オートコンプリート経由の検索候補を返します。入力中のサジェスト UI に最適。",
+        tags:["search","new"],
+        status:"new",
+        params:[
+          {name:"q",type:"string",req:true,desc:"検索キーワード (最小 1 文字)"}
+        ],
+        sample:"/api/suggest?q=lofi"
+      },
+      {
+        method:"GET",
+        path:"/api/video/:id",
+        title:"動画メタデータ (JSON)",
+        desc:"動画 ID から軽量な JSON 形式のメタデータを取得します。タイトル・チャンネル・サムネイル等。",
+        tags:["video","new"],
+        status:"new",
+        params:[
+          {name:"id",type:"string",req:true,desc:"動画 ID (11 文字)"}
+        ],
+        sample:"/api/video/dQw4w9WgXcQ"
+      },
+      {
+        method:"GET",
+        path:"/api/playlist/:id",
+        title:"プレイリスト取得",
+        desc:"YouTube プレイリスト ID から動画一覧と基本情報を取得します。",
+        tags:["video","playlist"],
+        status:"stable",
+        params:[
+          {name:"id",type:"string",req:true,desc:"プレイリスト ID"}
+        ],
+        sample:"/api/playlist/PLrAXtmRdnEQy6nuLMHjMZOz59Oq8B3VLG"
+      },
+      {
+        method:"GET",
+        path:"/api/auto-playlist",
+        title:"自動プレイリスト作成",
+        desc:"キーワードから動画を自動で集め、再生リスト構造の JSON を返します。",
+        tags:["video","search"],
+        status:"stable",
+        params:[
+          {name:"q",type:"string",req:true,desc:"検索キーワード (カンマ区切りで複数可)"},
+          {name:"limit",type:"number",req:false,desc:"取得本数 (デフォルト: 20、最大: 50)"}
+        ],
+        sample:"/api/auto-playlist?q=lofi&limit=20"
       },
       {
         method:"GET",
@@ -588,6 +669,46 @@
       },
       {
         method:"GET",
+        path:"/api/version",
+        title:"バージョン情報 (詳細)",
+        desc:"バージョン番号に加え、アプリ名・API バージョンを含む詳細 JSON を返します。",
+        tags:["meta","system","new"],
+        status:"new",
+        params:[],
+        sample:"/api/version"
+      },
+      {
+        method:"GET",
+        path:"/api/health",
+        title:"ヘルスチェック",
+        desc:"サーバーの稼働状況・uptime・メモリ使用量を返します。監視 / 死活確認に利用可能。",
+        tags:["meta","system","new"],
+        status:"new",
+        params:[],
+        sample:"/api/health"
+      },
+      {
+        method:"GET",
+        path:"/api/stats",
+        title:"サーバー統計",
+        desc:"起動時刻・API リクエスト総数・プラットフォーム情報などの統計を返します。",
+        tags:["meta","system","new"],
+        status:"new",
+        params:[],
+        sample:"/api/stats"
+      },
+      {
+        method:"GET",
+        path:"/api/endpoints",
+        title:"エンドポイント一覧",
+        desc:"公開されている全 API エンドポイントの一覧を機械可読な JSON 形式で返します。",
+        tags:["meta","system","new"],
+        status:"new",
+        params:[],
+        sample:"/api/endpoints"
+      },
+      {
+        method:"GET",
         path:"/games.json",
         title:"ゲーム一覧",
         desc:"内蔵ゲーム一覧の JSON データを返します。",
@@ -646,13 +767,18 @@
       return `const res = await fetch('${url}');\nconst data = await res.json();\nconsole.log(data);`;
     }
 
+    function statusBadgeClass(s){
+      if(s==='beta') return 'beta';
+      if(s==='new')  return 'new';
+      return 'stable';
+    }
     function cardHtml(ep, idx){
       return `
         <article class="card" data-method="${ep.method}" data-tags="${ep.tags.join(',')}" data-key="${idx}">
           <header class="card-head" data-toggle>
             <span class="method ${ep.method}">${ep.method}</span>
             <span class="path">${escapeHtml(ep.path)}</span>
-            <span class="badge ${ep.status==='beta'?'beta':'stable'}">${ep.status}</span>
+            <span class="badge ${statusBadgeClass(ep.status)}">${ep.status}</span>
             <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
             <div class="desc">${escapeHtml(ep.desc)}</div>
           </header>
@@ -720,6 +846,26 @@
       document.getElementById('stat-total').textContent = ENDPOINTS.length;
       document.getElementById('stat-get').textContent  = ENDPOINTS.filter(e=>e.method==='GET').length;
       document.getElementById('stat-post').textContent = ENDPOINTS.filter(e=>e.method==='POST').length;
+      document.getElementById('stat-new').textContent  = ENDPOINTS.filter(e=>e.status==='new').length;
+    }
+
+    /* ===== Latency check (ping /api/health) ===== */
+    async function checkLatency(){
+      const pill = document.getElementById('latencyPill');
+      if(!pill) return;
+      try{
+        const t0 = performance.now();
+        const r = await fetch('/api/health', { cache:'no-store' });
+        const ms = Math.round(performance.now() - t0);
+        if(r.ok){
+          pill.textContent = `⚡ ${ms} ms`;
+          pill.title = `/api/health → ${ms}ms`;
+        } else {
+          pill.textContent = `⚠ ${r.status}`;
+        }
+      }catch(_){
+        pill.textContent = '⚠ オフライン';
+      }
     }
 
     /* ===== Search & Filter ===== */
@@ -853,6 +999,8 @@
     /* ===== Init ===== */
     updateStats();
     render(ENDPOINTS);
+    checkLatency();
+    setInterval(checkLatency, 30000); // 30秒ごとに更新
 
     /* ===== Keyboard shortcut: "/" focus search ===== */
     document.addEventListener('keydown', (e)=>{

@@ -2336,6 +2336,167 @@ app.get("/api/docs", (req, res) => {
 app.get("/version", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "raw/version.json"));
 });
+
+// ──────────────────────────────────────────────────────────────────────────
+// 拡張 API エンドポイント群 (v1.4)
+//  - /api/health        : ヘルスチェック (稼働状況・uptime・メモリ)
+//  - /api/stats         : サーバー統計情報
+//  - /api/suggest       : 検索サジェスト (YouTube オートコンプリート)
+//  - /api/video/:id     : 動画メタデータ (JSON 形式の軽量レスポンス)
+//  - /api/version       : バージョン情報 (JSON)
+//  - /api/endpoints     : 公開エンドポイント一覧 (自己記述的)
+// ──────────────────────────────────────────────────────────────────────────
+const SERVER_START_TIME = Date.now();
+let API_REQUEST_COUNT = 0;
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) API_REQUEST_COUNT++;
+  next();
+});
+
+app.get("/api/health", (req, res) => {
+  const mem = process.memoryUsage();
+  res.json({
+    status: "ok",
+    uptime_seconds: Math.round((Date.now() - SERVER_START_TIME) / 1000),
+    uptime_human: (() => {
+      const s = Math.round((Date.now() - SERVER_START_TIME) / 1000);
+      const d = Math.floor(s / 86400);
+      const h = Math.floor((s % 86400) / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      return `${d}d ${h}h ${m}m ${sec}s`;
+    })(),
+    memory_mb: {
+      rss: +(mem.rss / 1024 / 1024).toFixed(1),
+      heap_used: +(mem.heapUsed / 1024 / 1024).toFixed(1),
+      heap_total: +(mem.heapTotal / 1024 / 1024).toFixed(1)
+    },
+    node_version: process.version,
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get("/api/stats", (req, res) => {
+  res.json({
+    server_start: new Date(SERVER_START_TIME).toISOString(),
+    uptime_seconds: Math.round((Date.now() - SERVER_START_TIME) / 1000),
+    api_requests_total: API_REQUEST_COUNT,
+    platform: process.platform,
+    arch: process.arch,
+    node_version: process.version,
+    version: "1.4.0"
+  });
+});
+
+app.get("/api/version", (req, res) => {
+  try {
+    const vPath = path.join(__dirname, "public", "raw/version.json");
+    const data = JSON.parse(fs.readFileSync(vPath, "utf-8"));
+    res.json({ ...data, name: "MIN-Tube-Slim", api: "v1" });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to read version" });
+  }
+});
+
+app.get("/api/suggest", async (req, res) => {
+  const q = (req.query.q || "").toString().trim();
+  if (!q) return res.status(400).json({ error: "query parameter 'q' is required" });
+  try {
+    // YouTube オートコンプリート公式エンドポイント
+    const url = `https://suggestqueries-clients6.youtube.com/complete/search?client=youtube&hl=ja&gl=jp&ds=yt&q=${encodeURIComponent(q)}`;
+    const r = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0" }
+    });
+    const text = await r.text();
+    // window.google.ac.h([...]) 形式の JSONP を JSON に変換
+    const m = text.match(/\[.*\]/s);
+    if (!m) return res.json({ query: q, suggestions: [] });
+    const parsed = JSON.parse(m[0]);
+    const suggestions = Array.isArray(parsed[1]) ? parsed[1].map(it => Array.isArray(it) ? it[0] : it) : [];
+    res.set("Cache-Control", "public, max-age=300");
+    res.json({ query: q, suggestions });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch suggestions", message: err.message });
+  }
+});
+
+app.get("/api/video/:id", async (req, res) => {
+  const videoId = req.params.id;
+  if (!videoId || !/^[\w-]{6,20}$/.test(videoId)) {
+    return res.status(400).json({ error: "Invalid video id" });
+  }
+  // 複数ソースを並列に試行し、最初に成功したものを返す
+  const tryYts = async () => {
+    const details = await yts.GetVideoDetails(videoId).catch(() => null);
+    if (!details) return null;
+    return {
+      source: "youtube-search-api",
+      id: videoId,
+      title: details.title || null,
+      channel: details.channel || null,
+      keywords: details.keywords || [],
+      description: details.description || null,
+      isLive: !!details.isLive,
+      suggestion: details.suggestion || []
+    };
+  };
+  const tryOembed = async () => {
+    try {
+      const r = await fetch(`https://www.youtube.com/oembed?format=json&url=https://www.youtube.com/watch?v=${videoId}`);
+      if (!r.ok) return null;
+      const j = await r.json();
+      return {
+        source: "oembed",
+        id: videoId,
+        title: j.title || null,
+        channel: { name: j.author_name || null, url: j.author_url || null },
+        thumbnail_oembed: j.thumbnail_url || null,
+        html: j.html || null
+      };
+    } catch (_) { return null; }
+  };
+  try {
+    let data = await tryYts();
+    if (!data) data = await tryOembed();
+    if (!data) return res.status(404).json({ error: "Video not found" });
+    res.set("Cache-Control", "public, max-age=600");
+    res.json({
+      ...data,
+      thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      url: `/video/${videoId}`
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Internal Error", message: err.message });
+  }
+});
+
+app.get("/api/endpoints", (req, res) => {
+  res.json({
+    base: `${req.protocol}://${req.get("host")}`,
+    count: 19,
+    endpoints: [
+      { method: "GET",  path: "/api/trending",          desc: "急上昇動画一覧" },
+      { method: "GET",  path: "/api/search",            desc: "動画検索" },
+      { method: "GET",  path: "/api/recommendations",   desc: "おすすめ動画" },
+      { method: "GET",  path: "/api/channel",           desc: "チャンネル情報" },
+      { method: "GET",  path: "/api/inv/channel/:name", desc: "Invidiousチャンネル検索" },
+      { method: "GET",  path: "/api/playlist/:id",      desc: "プレイリスト取得" },
+      { method: "GET",  path: "/api/auto-playlist",     desc: "自動プレイリスト作成" },
+      { method: "GET",  path: "/api/video/:id",         desc: "動画メタデータJSON" },
+      { method: "GET",  path: "/api/suggest",           desc: "検索サジェスト" },
+      { method: "GET",  path: "/api/health",            desc: "ヘルスチェック" },
+      { method: "GET",  path: "/api/stats",             desc: "サーバー統計" },
+      { method: "GET",  path: "/api/version",           desc: "バージョン情報JSON" },
+      { method: "GET",  path: "/api/endpoints",         desc: "本一覧" },
+      { method: "POST", path: "/api/save-history",      desc: "視聴履歴保存" },
+      { method: "GET",  path: "/img/:videoId",          desc: "サムネイル取得" },
+      { method: "GET",  path: "/360/:videoId",          desc: "360p 直リンク" },
+      { method: "GET",  path: "/stream/inv/:videoId",   desc: "Invidiousストリーム" },
+      { method: "GET",  path: "/sia-dl/:videoId",       desc: "ダウンロードリンク" },
+      { method: "GET",  path: "/ai-fetch/:videoId",     desc: "AIフェッチメタデータ" }
+    ]
+  });
+});
 app.get("/ai", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "app/ac.html"));
 });
