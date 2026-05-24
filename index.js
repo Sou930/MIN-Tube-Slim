@@ -326,6 +326,70 @@ app.get('/api/playlist/:id', async (req, res) => {
   }
 });
 
+// ── 自動プレイリスト生成 (ジャンル / キーワードから) ──
+// クエリ: ?q=キーワード&limit=20
+// 複数キーワード対応: q="Music, ロック" のようにカンマ区切りで複数指定可
+app.get('/api/auto-playlist', async (req, res) => {
+  const raw = (req.query.q || '').toString().trim();
+  const limit = Math.max(1, Math.min(50, parseInt(req.query.limit) || 20));
+  if (!raw) return res.status(400).json({ error: 'q (キーワード) が必要です', items: [] });
+
+  // カンマ・読点・改行などで複数キーワードに分割
+  const keywords = raw.split(/[,、\n]+/).map(s => s.trim()).filter(Boolean).slice(0, 5);
+  const perKw = Math.ceil(limit / keywords.length) + 5;
+
+  try {
+    const results = await Promise.all(
+      keywords.map(kw =>
+        yts.GetListByKeyword(kw, false, perKw).catch(() => ({ items: [] }))
+      )
+    );
+
+    // 動画のみ抽出 + 重複排除
+    const seen = new Set();
+    const merged = [];
+    // ラウンドロビン的に各キーワードから 1 件ずつ取って混ぜる
+    const max = Math.max(...results.map(r => (r.items || []).length));
+    for (let i = 0; i < max && merged.length < limit; i++) {
+      for (let k = 0; k < results.length && merged.length < limit; k++) {
+        const it = (results[k].items || [])[i];
+        if (!it) continue;
+        if (it.type !== 'video') continue;
+        const vid = typeof it.id === 'string' ? it.id : (it.id && it.id.videoId);
+        if (!vid || seen.has(vid)) continue;
+        seen.add(vid);
+
+        // フロント側で扱いやすい形に正規化
+        let thumb = '';
+        if (Array.isArray(it.thumbnail)) thumb = it.thumbnail[it.thumbnail.length - 1]?.url || '';
+        else if (it.thumbnail && it.thumbnail.thumbnails) thumb = it.thumbnail.thumbnails[it.thumbnail.thumbnails.length - 1]?.url || '';
+        if (!thumb) thumb = `https://i.ytimg.com/vi/${vid}/mqdefault.jpg`;
+
+        merged.push({
+          id: vid,
+          title: it.title || '',
+          channel: it.channelTitle || it.shortBylineText || '',
+          channelId: it.channelId || '',
+          thumbnail: thumb,
+          length: it.length && it.length.simpleText ? it.length.simpleText : (it.lengthText || ''),
+          views: it.viewCountText || it.viewCount || '',
+          published: it.publishedTimeText || ''
+        });
+      }
+    }
+
+    res.json({
+      query: raw,
+      keywords,
+      count: merged.length,
+      items: merged
+    });
+  } catch (err) {
+    console.error('auto-playlist error:', err);
+    res.status(500).json({ error: '生成に失敗しました', items: [] });
+  }
+});
+
 app.get('/playlist', async (req, res) => {
   const listId = req.query.list || '';
   if (!listId) return res.status(400).send('list parameter required');

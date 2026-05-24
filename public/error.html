@@ -3,281 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MINO</title>
-    <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <title>ページが見つかりません - MIN-Tube-Slim</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            width: 100vw; height: 100vh; 
-            background-color: #000; 
-            overflow: hidden; 
-            font-family: 'Yuji Syuku', serif;
+        html, body {
+            width: 100%;
+            min-height: 100vh;
+            background: #0f0f0f;
+            color: #f1f1f1;
+            font-family: "Roboto", "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
         }
-        
-        #webgl-container {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 1;
+        .wrap {
+            text-align: center;
+            max-width: 480px;
+            width: 100%;
         }
-
-        .cinema-bar {
-            position: absolute;
-            left: 0; width: 100%; height: 10%;
-            background: #000; z-index: 10;
+        .code {
+            font-size: 84px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: #3ea6ff;
+            line-height: 1;
+            margin-bottom: 12px;
         }
-        .cinema-bar.top { top: 0; }
-        .cinema-bar.bottom { bottom: 0; }
-
-        .logo-container {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 20;
-            pointer-events: none;
-            width: 800px; height: 300px;
-            display: flex; justify-content: center; align-items: center;
+        h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 12px;
         }
-
-        .tomino-text {
-            font-size: 140px;
-            letter-spacing: 15px;
-            fill: transparent;
-            stroke: #fdf5e6;
-            stroke-width: 1;
-            stroke-dasharray: 800;
-            stroke-dashoffset: 800;
-            opacity: 0;
-            filter: drop-shadow(0px 0px 20px rgba(255, 220, 150, 0));
+        p {
+            font-size: 14px;
+            color: #aaa;
+            line-height: 1.7;
+            margin-bottom: 24px;
         }
-
-        .animate-text {
-            opacity: 1;
-            animation: 
-                drawStroke 1.5s cubic-bezier(0.2, 1, 0.3, 1) forwards,
-                fillGlow 1s ease-in-out 1s forwards;
+        .btns {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
-
-        @keyframes drawStroke {
-            to { stroke-dashoffset: 0; }
+        a.btn {
+            display: inline-block;
+            padding: 10px 22px;
+            border-radius: 22px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s, transform 0.1s;
         }
-        @keyframes fillGlow {
-            to { 
-                fill: #fdf5e6; 
-                stroke-width: 0;
-                filter: drop-shadow(0px 0px 30px rgba(255, 210, 120, 0.8));
-            }
+        a.btn.primary {
+            background: #3ea6ff;
+            color: #0f0f0f;
         }
-        
-        .lens-flare {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at 70% 30%, rgba(255, 230, 200, 0.15) 0%, transparent 60%);
-            z-index: 5;
-            opacity: 0;
-            animation: flareFade 5s ease-out forwards;
-            pointer-events: none;
-            mix-blend-mode: screen;
+        a.btn.primary:hover { background: #65b8ff; }
+        a.btn.secondary {
+            background: transparent;
+            color: #f1f1f1;
+            border: 1px solid #303030;
         }
-        @keyframes flareFade {
-            0% { opacity: 0; }
-            40% { opacity: 1; }
-            100% { opacity: 0.5; }
-        }
+        a.btn.secondary:hover { background: #1f1f1f; }
+        a.btn:active { transform: scale(0.97); }
     </style>
 </head>
 <body>
-
-    <div class="cinema-bar top"></div>
-    <div class="cinema-bar bottom"></div>
-    <div class="lens-flare"></div>
-
-    <div id="webgl-container"></div>
-
-    <div class="logo-container">
-        <svg viewBox="0 0 800 300" width="100%" height="100%">
-            <text id="logoText" class="tomino-text" x="400" y="180" text-anchor="middle">mino</text>
-        </svg>
+    <div class="wrap">
+        <div class="code">404</div>
+        <h1>ページが見つかりません</h1>
+        <p>お探しのページは削除されたか、URLが変更された可能性があります。</p>
+        <div class="btns">
+            <a class="btn primary" href="/">ホームに戻る</a>
+            <a class="btn secondary" href="javascript:history.back()">前のページへ</a>
+        </div>
     </div>
-
-    <script>
-        const container = document.getElementById('webgl-container');
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x020104, 0.015);
-
-        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.2;
-        container.appendChild(renderer.domElement);
-
-
-        const pCanvas = document.createElement('canvas');
-        pCanvas.width = 1024; pCanvas.height = 1024;
-        const pCtx = pCanvas.getContext('2d');
-        const grad = pCtx.createLinearGradient(0, 0, 0, 1024);
-        grad.addColorStop(0, "#1a1514");
-        grad.addColorStop(0.2, "#8a6c53");
-        grad.addColorStop(0.5, "#d9bda0");
-        grad.addColorStop(0.8, "#634734");
-        grad.addColorStop(1, "#1a1514");
-        pCtx.fillStyle = grad;
-        pCtx.fillRect(0, 0, 1024, 1024);
-        for(let i=0; i<300; i++) {
-            pCtx.fillStyle = `rgba(255,255,255,${Math.random()*0.04})`;
-            pCtx.fillRect(0, Math.random()*1024, 1024, Math.random()*15);
-            pCtx.fillStyle = `rgba(0,0,0,${Math.random()*0.06})`;
-            pCtx.fillRect(0, Math.random()*1024, 1024, Math.random()*15);
-        }
-        const planetTex = new THREE.CanvasTexture(pCanvas);
-        planetTex.anisotropy = renderer.capabilities.getMaxAnisotropy(); // テクスチャの高画質化
-
-        const rCanvas = document.createElement('canvas');
-        rCanvas.width = 1024; rCanvas.height = 1024;
-        const rCtx = rCanvas.getContext('2d');
-        const rCenter = 512;
-        for(let r = 200; r < 500; r+=0.5) {
-            let alpha = Math.random() * 0.6;
-            if(r > 380 && r < 400) alpha = 0.05; // カッシーニの間隙
-            rCtx.strokeStyle = `rgba(220, 190, 150, ${alpha})`;
-            rCtx.lineWidth = 1;
-            rCtx.beginPath();
-            rCtx.arc(rCenter, rCenter, r, 0, Math.PI*2);
-            rCtx.stroke();
-        }
-        const ringTex = new THREE.CanvasTexture(rCanvas);
-        ringTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-
-        const saturnGroup = new THREE.Group();
-
-        const planetGeo = new THREE.SphereGeometry(10, 128, 128);
-        const planetMat = new THREE.MeshStandardMaterial({ 
-            map: planetTex,
-            roughness: 0.8,
-            metalness: 0.1
-        });
-        const planet = new THREE.Mesh(planetGeo, planetMat);
-        saturnGroup.add(planet);
-
-        const ringGeo = new THREE.RingGeometry(12, 22, 128);
-        const ringMat = new THREE.MeshStandardMaterial({
-            map: ringTex,
-            transparent: true,
-            side: THREE.DoubleSide,
-            depthWrite: false, 
-            opacity: 0.9
-        });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.rotation.x = Math.PI / 2; 
-        saturnGroup.add(ring);
-
-        saturnGroup.rotation.z = Math.PI / 8;
-        saturnGroup.rotation.x = Math.PI / 12;
-        scene.add(saturnGroup);
-
-        const starsGeo = new THREE.BufferGeometry();
-        const starsCount = 8000;
-        const posArray = new Float32Array(starsCount * 3);
-        const colorsArray = new Float32Array(starsCount * 3);
-        for(let i=0; i<starsCount*3; i+=3) {
-            posArray[i] = (Math.random() - 0.5) * 400; // x
-            posArray[i+1] = (Math.random() - 0.5) * 400; // y
-            posArray[i+2] = (Math.random() - 0.5) * 400 - 50; // z
-
-
-            const colorBlend = Math.random();
-            colorsArray[i] = 0.8 + colorBlend * 0.2; // r
-            colorsArray[i+1] = 0.7 + colorBlend * 0.3; // g
-            colorsArray[i+2] = 0.9 + colorBlend * 0.1; // b
-        }
-        starsGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        starsGeo.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3));
-        const starsMat = new THREE.PointsMaterial({
-            size: 0.3,
-            vertexColors: true,
-            transparent: true,
-            opacity: 0.8,
-            sizeAttenuation: true
-        });
-        const starMesh = new THREE.Points(starsGeo, starsMat);
-        scene.add(starMesh);
-
-        scene.add(new THREE.AmbientLight(0x1a1525, 0.3));
-        
-
-        const sunLight = new THREE.DirectionalLight(0xfff5e6, 3.5);
-        sunLight.position.set(-30, 15, -10);
-        scene.add(sunLight);
-
-
-        const rimLight = new THREE.DirectionalLight(0x6080ff, 1.0);
-        rimLight.position.set(30, -10, -20);
-        scene.add(rimLight);
-
-        
-
-        camera.position.set(-18, 2, 8);
-        camera.lookAt(0, 0, 0);
-
-
-        const tl = gsap.timeline();
-
-
-        tl.to(camera.position, {
-            x: 0,
-            y: 8,
-            z: 45,
-            duration: 3.5,
-            ease: "power2.out",
-            onUpdate: () => camera.lookAt(0, 0, 0)
-        }, 0);
-
-        tl.to(saturnGroup.rotation, {
-            y: Math.PI / 12,
-            duration: 5,
-            ease: "none"
-        }, 0);
-
-
-        setTimeout(() => {
-            document.getElementById('logoText').classList.add('animate-text');
-        }, 3000);
-
-
-        tl.to(camera.position, {
-            z: 48,
-            y: 9,
-            duration: 1.5,
-            ease: "power1.out",
-            onUpdate: () => camera.lookAt(0, 0, 0)
-        }, 3.5);
-
-
-        function animate() {
-            requestAnimationFrame(animate);
-
-            starMesh.rotation.y += 0.0003;
-            renderer.render(scene, camera);
-        }
-        animate();
-
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
-<script>
-    setTimeout(function() {
-      document.cookie = "humanVerified=true; path=/";
-      window.location.href = "/";
-    }, 5000);
-  </script>
-  
 </body>
 </html>
