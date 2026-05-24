@@ -56,48 +56,6 @@
     "status": "done"
   },
   {
-    "key": "snow",
-    "name": "SnowBall.io",
-    "emoji": "❄️",
-    "sub": "アーケード · 1人プレイ",
-    "file": "fun/snow.html",
-    "desc": "雪玉を転がして巨大化！敵を落とせ！",
-    "genre": "arcade",
-    "genreLabel": "アーケード",
-    "players": "1人プレイ",
-    "tags": ["アーケード", "対戦", "雪球"],
-    "isNew": false,
-    "status": "done"
-  },
-  {
-    "key": "snowride",
-    "name": "SnowRide",
-    "emoji": "🏂",
-    "sub": "アクション · 1人プレイ",
-    "file": "fun/snowride.html",
-    "desc": "雪山を滑走して障害物を避けろ！",
-    "genre": "action",
-    "genreLabel": "アクション",
-    "players": "1人プレイ",
-    "tags": ["アクション", "ラン系", "スノー"],
-    "isNew": false,
-    "status": "done"
-  },
-  {
-    "key": "2048",
-    "name": "2048 (PC)",
-    "emoji": "🔢",
-    "sub": "パズル · 1人プレイ",
-    "file": "fun/2048.html",
-    "desc": "数字をスライドして2048を目指せ！シンプルだけど奥深い定番パズル。",
-    "genre": "puzzle",
-    "genreLabel": "パズル",
-    "players": "1人プレイ",
-    "tags": ["パズル", "頭脳"],
-    "isNew": false,
-    "status": "done"
-  },
-  {
     "key": "REPO",
     "name": "R.E.P.O",
     "emoji": "🤖",
@@ -181,20 +139,6 @@
     "players": "1人プレイ",
     "tags": ["アーケード"],
     "isNew": false,
-    "status": "done"
-  },
-  {
-    "key": "deepminer",
-    "name": "Deep Miner",
-    "emoji": "⛏️",
-    "sub": "アクション · 1人プレイ",
-    "file": "fun/deepminer.html",
-    "desc": "地下深くへ掘り進め！",
-    "genre": "action",
-    "genreLabel": "アクション",
-    "players": "1人プレイ",
-    "tags": ["アクション", "採掘", "強化"],
-    "isNew": true,
     "status": "done"
   },
   {
@@ -360,20 +304,6 @@
     "status": "done"
   },
   {
-    "key": "wolf",
-    "name": "人狼",
-    "emoji": "🦴",
-    "sub": "オンライン 心理戦",
-    "file": "fun/wolf.html",
-    "desc": "minの仲間と人狼をプレイしましょう！巧みなプレイで勝利をつかみ取ろう！",
-    "genre": "think",
-    "genreLabel": "online",
-    "players": "4~8人",
-    "tags": ["オンライン", "みんなでプレイ", "人狼"],
-    "isNew": true,
-    "status": "done"
-  },
-  {
     "key": "dada-survivor",
     "name": "ダダサバイバー",
     "emoji": "🏹",
@@ -414,20 +344,6 @@
     "genreLabel": "アクション",
     "players": "1人プレイ",
     "tags": ["RPG", "ストーリー", "名作"],
-    "isNew": true,
-    "status": "done"
-  },
-  {
-    "key": "sans-fight",
-    "name": "Undertale (Sans Fight)",
-    "emoji": "☠️",
-    "sub": "アクション · 激ムズ",
-    "file": "fun/Undertale Last Breath PHASE THREE.html",
-    "desc": "サンズ戦強化版です",
-    "genre": "action",
-    "genreLabel": "アクション",
-    "players": "1人プレイ",
-    "tags": ["アクション", "激ムズ", "ボス戦"],
     "isNew": true,
     "status": "done"
   },
@@ -546,20 +462,6 @@
     "genreLabel": "アクション",
     "players": "1人プレイ",
     "tags": ["アクション", "棒人間", "激ムズ"],
-    "isNew": true,
-    "status": "done"
-  },
-  {
-    "key": "terraria",
-    "name": "Terraria",
-    "emoji": "🌳",
-    "sub": "アクション · 棒人間",
-    "file": "fun/Terraria.html",
-    "desc": "トラップを避けゴールを手にしろ",
-    "genre": "RPG",
-    "genreLabel": "アクション",
-    "players": "1人プレイ",
-    "tags": ["アクション", "RPG", "激ムズ"],
     "isNew": true,
     "status": "done"
   },
