@@ -826,80 +826,206 @@
   flex-shrink: 0; 
 }
 
-/* ===== 検索フィルター強化 + カード表示切替 ===== */
+/* ===== 検索フィルター (YouTube 風) ===== */
+/* 検索ページ以外では非表示 */
+.filter-bar { display: none; }
+body.is-search .filter-bar { display: flex; }
+
 .filter-bar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-  padding: 12px 24px; border-bottom: 1px solid var(--border);
+  flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 8px 24px 12px; border-bottom: 1px solid var(--border);
   background: var(--bg);
 }
-.filter-bar .filter-label {
-  font-size: 12px; color: var(--text-muted); margin-right: 4px;
-  text-transform: uppercase; letter-spacing: 0.5px;
+.filter-toggle-btn {
+  background: var(--chip-bg); color: var(--text);
+  border: 1px solid transparent; border-radius: 8px;
+  padding: 0 14px; height: 36px;
+  font-size: 14px; font-weight: 500; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: background 0.1s;
+  font-family: 'Roboto', Arial, sans-serif;
 }
-.filter-bar select, .filter-bar .filter-btn {
-  background: var(--chip-bg); color: var(--text); border: 1px solid var(--border);
-  border-radius: 18px; padding: 6px 12px; font-size: 13px; cursor: pointer;
-  outline: none; transition: background 0.15s, border-color 0.15s;
-  height: 32px;
+.filter-toggle-btn:hover { background: var(--border); }
+.filter-toggle-btn svg { width: 16px; height: 16px; fill: currentColor; }
+.filter-toggle-btn.active {
+  background: var(--chip-active-bg); color: var(--chip-active-text);
 }
-.filter-bar select:hover, .filter-bar .filter-btn:hover { background: var(--border); }
-.filter-bar select:focus { border-color: var(--accent); }
-.filter-bar .filter-reset {
-  background: transparent; border: none; color: var(--accent);
-  font-size: 13px; cursor: pointer; padding: 4px 8px;
+.filter-divider {
+  width: 1px; align-self: stretch;
+  background: var(--border); margin: 4px 6px;
 }
-.filter-bar .filter-reset:hover { text-decoration: underline; }
-.filter-bar .view-toggle {
-  display: inline-flex; background: var(--chip-bg); border: 1px solid var(--border);
-  border-radius: 18px; overflow: hidden; margin-left: auto;
-}
-.filter-bar .view-toggle button {
-  background: transparent; color: var(--text-muted); border: none;
-  padding: 6px 12px; font-size: 13px; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 5px;
-  transition: background 0.15s, color 0.15s;
-}
-.filter-bar .view-toggle button.active {
-  background: var(--text); color: var(--bg); font-weight: 600;
-}
-.filter-bar .view-toggle button:hover:not(.active) { background: var(--border); color: var(--text); }
-.filter-bar .view-toggle svg { width: 14px; height: 14px; }
 .filter-count {
-  font-size: 12px; color: var(--text-muted); margin-left: 4px;
+  font-size: 12px; color: var(--text-muted); margin-left: auto;
 }
 
-/* List view */
-.video-grid.view-list {
-  display: flex; flex-direction: column; gap: 16px; row-gap: 16px;
+/* フィルターポップオーバー */
+.filter-popover-wrap { position: relative; }
+.filter-popover {
+  display: none;
+  position: absolute; top: calc(100% + 8px); left: 0;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 720px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  z-index: 1500;
 }
-.video-grid.view-list .video-card { flex-direction: row; gap: 16px; }
-.video-grid.view-list .thumb { width: 360px; flex-shrink: 0; margin-bottom: 0; }
-.video-grid.view-list .meta { flex: 1; align-items: flex-start; }
-.video-grid.view-list .details h3 { font-size: 16px; -webkit-line-clamp: 2; }
-.video-grid.view-list .channel-avatar { display: none; }
-@media (max-width: 700px) {
-  .video-grid.view-list .video-card { flex-direction: column; gap: 0; }
-  .video-grid.view-list .thumb { width: 100%; }
+.filter-popover.open { display: block; }
+.filter-popover-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 0; column-gap: 24px;
+}
+.filter-popover-col { display: flex; flex-direction: column; min-width: 0; }
+.filter-popover-col-title {
+  font-size: 13px; font-weight: 500;
+  color: var(--text); text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+.filter-option {
+  background: none; border: none; color: var(--text);
+  text-align: left; font-size: 13px;
+  padding: 8px 4px; cursor: pointer;
+  border-radius: 4px;
+  font-family: 'Roboto', Arial, sans-serif;
+  transition: background 0.1s;
+}
+.filter-option:hover { background: rgba(255,255,255,0.08); }
+body.light-mode .filter-option:hover { background: rgba(0,0,0,0.05); }
+.filter-option.selected {
+  font-weight: 700; color: var(--text);
+}
+.filter-option.selected::before {
+  content: "• ";
 }
 
-/* Compact view */
-.video-grid.view-compact {
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 10px 10px; row-gap: 20px;
+@media (max-width: 800px) {
+  .filter-popover { min-width: 0; left: 0; right: 0; width: calc(100vw - 32px); }
+  .filter-popover-grid { grid-template-columns: repeat(2, 1fr); row-gap: 16px; }
 }
-.video-grid.view-compact .thumb { margin-bottom: 6px; border-radius: 8px; }
-.video-grid.view-compact .channel-avatar { width: 28px; height: 28px; font-size: 11px; }
-.video-grid.view-compact .details h3 { font-size: 13px; -webkit-line-clamp: 2; }
-.video-grid.view-compact .details .channel-name,
-.video-grid.view-compact .details .video-stats { font-size: 11px; }
-.video-grid.view-compact .card-menu-btn { display: none; }
-
 @media (max-width: 768px) {
-  .filter-bar { padding: 10px 16px; gap: 8px; }
-  .filter-bar .view-toggle { margin-left: 0; }
-  .filter-bar .filter-label { display: none; }
+  .filter-bar { padding: 8px 16px 10px; gap: 8px; }
 }
 .video-card.filtered-hidden { display: none !important; }
+.channel-result-card.filtered-hidden { display: none !important; }
+.playlist-card-result.filtered-hidden { display: none !important; }
+
+/* ===== 通知ボタン & パネル ===== */
+.notify-wrapper { position: relative; }
+.notify-badge {
+  position: absolute;
+  top: 4px; right: 4px;
+  background: #ff0000;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  pointer-events: none;
+}
+.notify-panel {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 380px;
+  max-height: 480px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  z-index: 2000;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.notify-panel.open { display: flex; }
+.notify-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.notify-panel-title {
+  font-size: 16px; font-weight: 600; color: var(--text);
+}
+.notify-clear-btn {
+  background: none; border: none; color: var(--accent);
+  font-size: 12px; cursor: pointer; padding: 4px 8px;
+  border-radius: 4px;
+}
+.notify-clear-btn:hover { background: rgba(255,255,255,0.08); }
+body.light-mode .notify-clear-btn:hover { background: rgba(0,0,0,0.05); }
+.notify-panel-body {
+  flex: 1; overflow-y: auto;
+}
+.notify-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.notify-empty svg { margin-bottom: 8px; }
+.notify-item {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px 16px;
+  text-decoration: none;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.1s;
+  position: relative;
+  border-bottom: 1px solid var(--border);
+}
+.notify-item:hover { background: rgba(255,255,255,0.06); }
+body.light-mode .notify-item:hover { background: rgba(0,0,0,0.04); }
+.notify-item.unread { background: rgba(255,0,0,0.06); }
+body.light-mode .notify-item.unread { background: rgba(255,0,0,0.04); }
+.notify-item-thumb {
+  width: 92px; height: 52px;
+  border-radius: 6px; overflow: hidden;
+  background: #000; flex-shrink: 0;
+}
+.notify-item-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.notify-item-body { flex: 1; min-width: 0; }
+.notify-item-ch {
+  font-size: 11px; color: var(--text-muted);
+  margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.notify-item-title {
+  font-size: 13px; font-weight: 500; color: var(--text);
+  line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.notify-item-time {
+  font-size: 11px; color: var(--text-muted);
+  margin-top: 4px;
+}
+.notify-item-remove {
+  position: absolute; top: 8px; right: 8px;
+  width: 24px; height: 24px;
+  border: none; background: transparent;
+  color: var(--text-muted); cursor: pointer;
+  border-radius: 50%; opacity: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.1s, background 0.1s;
+}
+.notify-item:hover .notify-item-remove { opacity: 1; }
+.notify-item-remove:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+body.light-mode .notify-item-remove:hover { background: rgba(0,0,0,0.08); }
+.notify-item-remove svg { width: 14px; height: 14px; fill: currentColor; }
+@media (max-width: 600px) {
+  .notify-panel {
+    position: fixed; top: 56px; right: 8px; left: 8px;
+    width: auto; max-height: calc(100vh - 80px);
+  }
+}
 
 .extra-link {
   display: flex;
@@ -1013,6 +1139,25 @@
     </div>
 
     <div class="header-right">
+      <div class="notify-wrapper">
+        <button class="icon-btn" id="notifyBtn" title="通知" aria-label="通知">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M10 20h4c0 1.1-.9 2-2 2s-2-.9-2-2zm10-2.65V19H4v-1.65l2-1.88v-5.15C6 7.4 7.56 5.1 10 4.34v-.38C10 2.88 10.88 2 11.97 2s1.97.88 1.97 1.96v.39c2.44.75 4 3.06 4 5.97v5.15l2 1.88zm-1 .42l-2-1.88v-5.47c0-2.47-1.19-4.36-3.13-5.1-1.26-.53-2.64-.5-3.84.03C8.15 6.11 7 7.99 7 10.42v5.47l-2 1.88V18h14v-.23z"/></svg>
+          <span class="notify-badge" id="notifyBadge" style="display:none;">0</span>
+        </button>
+        <div class="notify-panel" id="notifyPanel">
+          <div class="notify-panel-header">
+            <span class="notify-panel-title">通知</span>
+            <button class="notify-clear-btn" id="notifyClearBtn" type="button" title="すべて消去">すべて消去</button>
+          </div>
+          <div class="notify-panel-body" id="notifyPanelBody">
+            <div class="notify-empty" id="notifyEmpty">
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor" style="opacity:0.3;"><path d="M10 20h4c0 1.1-.9 2-2 2s-2-.9-2-2zm10-2.65V19H4v-1.65l2-1.88v-5.15C6 7.4 7.56 5.1 10 4.34v-.38C10 2.88 10.88 2 11.97 2s1.97.88 1.97 1.96v.39c2.44.75 4 3.06 4 5.97v5.15l2 1.88zm-1 .42l-2-1.88v-5.47c0-2.47-1.19-4.36-3.13-5.1-1.26-.53-2.64-.5-3.84.03C8.15 6.11 7 7.99 7 10.42v5.47l-2 1.88V18h14v-.23z"/></svg>
+              <div>通知はありません</div>
+              <div style="font-size:11px;opacity:0.7;margin-top:4px;">登録チャンネルの通知ベルをONにすると、新着動画がここに表示されます</div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="settings-wrapper">
         <button class="icon-btn" id="settingsBtn" title="設定" aria-label="設定">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
@@ -1175,48 +1320,54 @@
         <button class="chip" data-q="最新テクノロジー">テック</button>
       </div>
 
-      <!-- 検索フィルター強化 + カード表示切替 -->
+      <!-- 検索フィルター (YouTube 風) - 検索結果のみ表示 -->
       <div class="filter-bar" id="filterBar">
-        <span class="filter-label">タイプ</span>
-        <select id="filterType" aria-label="タイプ">
-          <option value="all">すべて</option>
-          <option value="video">動画のみ</option>
-          <option value="channel">チャンネル</option>
-          <option value="playlist">再生リスト</option>
-          <option value="short">ショート (#)</option>
-          <option value="long">通常動画のみ</option>
-        </select>
-        <span class="filter-label">長さ</span>
-        <select id="filterDuration" aria-label="長さ">
-          <option value="any">指定なし</option>
-          <option value="short">4分以下</option>
-          <option value="medium">4〜20分</option>
-          <option value="long">20分以上</option>
-        </select>
-        <span class="filter-label">並び替え</span>
-        <select id="filterSort" aria-label="並び替え">
-          <option value="default">関連度</option>
-          <option value="views">再生回数 (多い順)</option>
-          <option value="date">投稿日 (新しい順)</option>
-          <option value="title">タイトル (A〜Z)</option>
-        </select>
-        <button class="filter-reset" id="filterReset" type="button">リセット</button>
-        <span class="filter-count" id="filterCount"></span>
-
-        <div class="view-toggle" role="group" aria-label="表示切替">
-          <button data-view="grid" class="active" title="グリッド表示" aria-label="グリッド">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>
-            <span>グリッド</span>
+        <div class="filter-popover-wrap">
+          <button type="button" class="filter-toggle-btn" id="filterToggleBtn" aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><path d="M21 6H3V5h18v1zm-6 5H9v1h6v-1zm-3 5h-3v1h3v-1z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 6h18M6 12h12M10 18h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            フィルター
           </button>
-          <button data-view="list" title="リスト表示" aria-label="リスト">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v3H3V5zm0 5h18v3H3v-3zm0 5h18v3H3v-3z"/></svg>
-            <span>リスト</span>
-          </button>
-          <button data-view="compact" title="コンパクト表示" aria-label="コンパクト">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h5v5H3V3zm7 0h5v5h-5V3zm7 0h4v5h-4V3zM3 10h5v4H3v-4zm7 0h5v4h-5v-4zm7 0h4v4h-4v-4zM3 16h5v5H3v-5zm7 0h5v5h-5v-5zm7 0h4v5h-4v-5z"/></svg>
-            <span>コンパクト</span>
-          </button>
+          <div class="filter-popover" id="filterPopover" role="dialog" aria-label="検索フィルター">
+            <div class="filter-popover-grid">
+              <div class="filter-popover-col">
+                <div class="filter-popover-col-title">アップロード日</div>
+                <button type="button" class="filter-option selected" data-group="date" data-value="any">指定なし</button>
+                <button type="button" class="filter-option" data-group="date" data-value="hour">1時間以内</button>
+                <button type="button" class="filter-option" data-group="date" data-value="today">今日</button>
+                <button type="button" class="filter-option" data-group="date" data-value="week">今週</button>
+                <button type="button" class="filter-option" data-group="date" data-value="month">今月</button>
+                <button type="button" class="filter-option" data-group="date" data-value="year">今年</button>
+              </div>
+              <div class="filter-popover-col">
+                <div class="filter-popover-col-title">タイプ</div>
+                <button type="button" class="filter-option selected" data-group="type" data-value="all">すべて</button>
+                <button type="button" class="filter-option" data-group="type" data-value="video">動画</button>
+                <button type="button" class="filter-option" data-group="type" data-value="channel">チャンネル</button>
+                <button type="button" class="filter-option" data-group="type" data-value="playlist">再生リスト</button>
+                <button type="button" class="filter-option" data-group="type" data-value="short">ショート</button>
+              </div>
+              <div class="filter-popover-col">
+                <div class="filter-popover-col-title">時間</div>
+                <button type="button" class="filter-option selected" data-group="duration" data-value="any">指定なし</button>
+                <button type="button" class="filter-option" data-group="duration" data-value="short">4分未満</button>
+                <button type="button" class="filter-option" data-group="duration" data-value="medium">4〜20分</button>
+                <button type="button" class="filter-option" data-group="duration" data-value="long">20分以上</button>
+              </div>
+              <div class="filter-popover-col">
+                <div class="filter-popover-col-title">並び替え</div>
+                <button type="button" class="filter-option selected" data-group="sort" data-value="default">関連度</button>
+                <button type="button" class="filter-option" data-group="sort" data-value="date">アップロード日</button>
+                <button type="button" class="filter-option" data-group="sort" data-value="views">再生回数</button>
+                <button type="button" class="filter-option" data-group="sort" data-value="title">タイトル順</button>
+              </div>
+            </div>
+          </div>
         </div>
+        <button type="button" class="filter-toggle-btn" id="filterResetBtn" title="フィルターをリセット" style="display:none;">
+          <svg viewBox="0 0 24 24"><path d="M12 5V2L8 6l4 4V7c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 16.03 20 14.57 20 13c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 8.74C4.46 9.97 4 11.43 4 13c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+          リセット
+        </button>
+        <span class="filter-count" id="filterCount"></span>
       </div>
 
       <div class="content-area">
@@ -1778,6 +1929,7 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
       isPersonalized = false;
       document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
       history.pushState(null, '', `/search?q=${encodeURIComponent(q)}`);
+      document.body.classList.add('is-search');
       loadContent(q, 0);
     };
 
@@ -1801,6 +1953,11 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
         chip.classList.add('active');
         currentPage = 0;
         searchInput.value = '';
+        // チップクリックは「ホーム」扱い - URL から q を除去してフィルター非表示にする
+        if (location.search.includes('q=')) {
+          history.pushState(null, '', '/');
+        }
+        document.body.classList.remove('is-search');
         if (chip.dataset.q === 'recommended') {
           isPersonalized = true;
           loadPersonalizedFeed(0);
@@ -1823,6 +1980,10 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
         if (matchingChip) matchingChip.classList.add('active');
         currentPage = 0;
         searchInput.value = '';
+        if (location.search.includes('q=')) {
+          history.pushState(null, '', '/');
+        }
+        document.body.classList.remove('is-search');
         if (q === 'recommended') {
           isPersonalized = true;
           loadPersonalizedFeed(0);
@@ -2664,20 +2825,16 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
         setTimeout(dismiss, TOAST_AUTO_HIDE_MS);
       }
 
-      function showNativeNotification(video) {
+      // ※ デスクトップ通知は廃止し、通知ベル(パネル)へ移動しました
+      function addToNotificationPanel(video) {
         try {
-          if (!('Notification' in window)) return;
-          if (Notification.permission !== 'granted') return;
-          const n = new Notification(video.channel || '新着動画', {
-            body: video.title || '',
-            icon: ytThumb(video.id),
-            tag: 'newvideo-' + video.id
-          });
-          n.onclick = () => {
-            window.focus();
-            window.location.href = '/video/' + video.id;
-            n.close();
-          };
+          if (typeof window.addAppNotification === 'function') {
+            window.addAppNotification({
+              id: video.id,
+              title: video.title || '',
+              channel: video.channel || ''
+            });
+          }
         } catch {}
       }
 
@@ -2718,7 +2875,7 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
                   channel: ch
                 };
                 showInAppToast(payload);
-                showNativeNotification(payload);
+                addToNotificationPanel(payload);
               }
             }
             // 既知リストを更新（通知ベルOFFでも既知だけは更新して将来の重複を防止）
@@ -2757,32 +2914,68 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
     // ====================================================================
 
     // ====================================================================
-    // ▼▼▼ 検索フィルター強化 + カード表示切替 ▼▼▼
+    // ▼▼▼ 検索フィルター (YouTube 風) ▼▼▼
     // ====================================================================
-    (function setupFiltersAndViews() {
+    (function setupYouTubeFilters() {
       const grid = document.getElementById('videoGrid');
-      const fType = document.getElementById('filterType');
-      const fDur  = document.getElementById('filterDuration');
-      const fSort = document.getElementById('filterSort');
-      const fReset = document.getElementById('filterReset');
+      const filterBar = document.getElementById('filterBar');
+      const toggleBtn = document.getElementById('filterToggleBtn');
+      const popover = document.getElementById('filterPopover');
+      const resetBtn = document.getElementById('filterResetBtn');
       const fCount = document.getElementById('filterCount');
-      const viewButtons = document.querySelectorAll('.view-toggle button');
-      if (!grid || !fType || !fDur || !fSort) return;
+      const options = filterBar ? filterBar.querySelectorAll('.filter-option') : [];
+      if (!grid || !filterBar || !toggleBtn || !popover) return;
 
-      // --- 表示モードの永続化 ---
-      const VIEW_KEY = 'mts:gridView';
-      function applyView(view) {
-        grid.classList.remove('view-grid', 'view-list', 'view-compact');
-        grid.classList.add('view-' + view);
-        viewButtons.forEach(b => b.classList.toggle('active', b.dataset.view === view));
-        try { localStorage.setItem(VIEW_KEY, view); } catch(e) {}
+      // 現在のフィルター状態
+      const state = { date: 'any', type: 'all', duration: 'any', sort: 'default' };
+      const DEFAULTS = { date: 'any', type: 'all', duration: 'any', sort: 'default' };
+
+      function isFilterActive() {
+        return state.date !== 'any' || state.type !== 'all' ||
+               state.duration !== 'any' || state.sort !== 'default';
       }
-      let savedView = 'grid';
-      try { savedView = localStorage.getItem(VIEW_KEY) || 'grid'; } catch(e) {}
-      applyView(savedView);
-      viewButtons.forEach(b => b.addEventListener('click', () => applyView(b.dataset.view)));
+      function syncUIState() {
+        options.forEach(opt => {
+          const g = opt.dataset.group;
+          opt.classList.toggle('selected', state[g] === opt.dataset.value);
+        });
+        toggleBtn.classList.toggle('active', isFilterActive());
+        if (resetBtn) resetBtn.style.display = isFilterActive() ? '' : 'none';
+      }
 
-      // --- 長さ(分)を抽出 ---
+      // ポップオーバー開閉
+      toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = !popover.classList.contains('open');
+        popover.classList.toggle('open', open);
+        toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      document.addEventListener('click', (e) => {
+        if (!popover.contains(e.target) && !toggleBtn.contains(e.target)) {
+          popover.classList.remove('open');
+          toggleBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      // 各オプションクリック
+      options.forEach(opt => {
+        opt.addEventListener('click', () => {
+          const g = opt.dataset.group;
+          state[g] = opt.dataset.value;
+          syncUIState();
+          applyFilters();
+        });
+      });
+
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          Object.assign(state, DEFAULTS);
+          syncUIState();
+          applyFilters();
+        });
+      }
+
+      // --- ヘルパー ---
       function parseLengthToSeconds(text) {
         if (!text) return null;
         const parts = String(text).split(':').map(s => parseInt(s, 10));
@@ -2792,7 +2985,6 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
         if (parts.length === 1) return parts[0];
         return null;
       }
-      // 再生数の数値化
       function parseViews(text) {
         if (!text) return 0;
         const m = String(text).replace(/,/g, '').match(/([\d.]+)\s*([万億千KMB])?/i);
@@ -2807,7 +2999,6 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
         else if (/b/i.test(unit||'')) n *= 1000000000;
         return Math.floor(n);
       }
-      // 投稿日テキストを「最近からの秒数」へ
       function parsePublished(text) {
         if (!text) return Infinity;
         const t = String(text);
@@ -2826,13 +3017,16 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
       }
 
       function applyFilters() {
-        const tVal = fType.value;
-        const dVal = fDur.value;
-        const sVal = fSort.value;
+        // ホーム（検索結果以外）ではフィルターを適用しない
+        if (!document.body.classList.contains('is-search')) {
+          Array.from(grid.children).forEach(c => c.classList.remove('filtered-hidden'));
+          if (fCount) fCount.textContent = '';
+          return;
+        }
+        const { date: dateVal, type: tVal, duration: dVal, sort: sVal } = state;
         const cards = Array.from(grid.children);
         const visible = [];
         cards.forEach(card => {
-          // タイプ判定
           const isChannel = card.classList.contains('channel-result-card');
           const isPlaylist = card.classList.contains('playlist-card-result');
           let cardType = 'video';
@@ -2844,7 +3038,6 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
           const lenText = card.querySelector('.duration-badge')?.textContent || '';
           const seconds = parseLengthToSeconds(lenText);
           const statsText = card.querySelector('.video-stats')?.textContent || '';
-          // 再生数と投稿日を分離 ("123,456 回視聴 • 2日前")
           const [viewPart, datePart] = statsText.split('•').map(s => s.trim());
           const views = parseViews(viewPart);
           const ageSec = parsePublished(datePart || viewPart);
@@ -2855,66 +3048,251 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
           else if (tVal === 'channel' && cardType !== 'channel') show = false;
           else if (tVal === 'playlist' && cardType !== 'playlist') show = false;
           else if (tVal === 'short' && (cardType !== 'video' || !isShort)) show = false;
-          else if (tVal === 'long' && (cardType !== 'video' || isShort)) show = false;
 
-          // 長さフィルター (動画のみ適用)
-          if (show && cardType === 'video' && dVal !== 'any' && seconds !== null) {
-            if (dVal === 'short' && seconds > 240) show = false;
-            if (dVal === 'medium' && (seconds <= 240 || seconds > 1200)) show = false;
-            if (dVal === 'long' && seconds <= 1200) show = false;
-          } else if (show && cardType === 'video' && dVal !== 'any' && seconds === null) {
-            // 長さ不明な動画は除外
-            show = false;
+          // 時間フィルター (動画のみ)
+          if (show && cardType === 'video' && dVal !== 'any') {
+            if (seconds === null) show = false;
+            else if (dVal === 'short' && seconds > 240) show = false;
+            else if (dVal === 'medium' && (seconds <= 240 || seconds > 1200)) show = false;
+            else if (dVal === 'long' && seconds <= 1200) show = false;
+          }
+
+          // アップロード日フィルター (動画のみ)
+          if (show && cardType === 'video' && dateVal !== 'any') {
+            const limits = { hour: 3600, today: 86400, week: 604800, month: 2592000, year: 31536000 };
+            const limit = limits[dateVal];
+            if (limit && (ageSec === Infinity || ageSec > limit)) show = false;
           }
 
           card.classList.toggle('filtered-hidden', !show);
           if (show) visible.push({ el: card, type: cardType, title, views, ageSec, seconds });
         });
 
-        // ソート (チャンネル/プレイリストはそのまま末尾、動画のみ並び替え)
+        // ソート (動画のみ並び替え、その他は末尾に維持)
         if (sVal !== 'default') {
-          const videos = visible.filter(v => v.type === 'video').map(v => v.el);
+          const videos = visible.filter(v => v.type === 'video');
           const others = visible.filter(v => v.type !== 'video').map(v => v.el);
           videos.sort((a, b) => {
-            const va = visible.find(x => x.el === a);
-            const vb = visible.find(x => x.el === b);
-            if (sVal === 'views')  return vb.views - va.views;
-            if (sVal === 'date')   return va.ageSec - vb.ageSec;
-            if (sVal === 'title')  return va.title.localeCompare(vb.title, 'ja');
+            if (sVal === 'views') return b.views - a.views;
+            if (sVal === 'date')  return a.ageSec - b.ageSec;
+            if (sVal === 'title') return a.title.localeCompare(b.title, 'ja');
             return 0;
           });
-          // DOMを並び替え
-          [...videos, ...others].forEach(el => grid.appendChild(el));
+          [...videos.map(v => v.el), ...others].forEach(el => grid.appendChild(el));
         }
 
         if (fCount) {
-          const total = cards.filter(c => c.classList.contains('video-card')).length;
+          const total = cards.filter(c =>
+            c.classList.contains('video-card') ||
+            c.classList.contains('channel-result-card') ||
+            c.classList.contains('playlist-card-result')
+          ).length;
           const shown = visible.length;
-          fCount.textContent = (shown !== total) ? `${shown}/${total} 件表示中` : `${total} 件`;
+          if (isFilterActive() && shown !== total) {
+            fCount.textContent = `${shown}/${total} 件表示中`;
+          } else {
+            fCount.textContent = '';
+          }
         }
       }
 
-      fType.addEventListener('change', applyFilters);
-      fDur.addEventListener('change', applyFilters);
-      fSort.addEventListener('change', applyFilters);
-      if (fReset) fReset.addEventListener('click', () => {
-        fType.value = 'all'; fDur.value = 'any'; fSort.value = 'default';
-        applyFilters();
-      });
-
-      // 検索結果が更新されるたびにフィルターを再適用
+      // 検索結果が更新されるたびに再適用
       const obs = new MutationObserver(() => {
-        // 短時間に複数発火するため軽くデバウンス
         clearTimeout(window.__filterDebounce);
         window.__filterDebounce = setTimeout(applyFilters, 120);
       });
       obs.observe(grid, { childList: true });
 
+      // 初期同期
+      syncUIState();
+
       // 公開: 外部から強制適用したい時用
       window.__applyFilters = applyFilters;
     })();
     // ====================================================================
-    // ▲▲▲ 検索フィルター強化 + カード表示切替 ここまで ▲▲▲
+    // ▲▲▲ 検索フィルター ここまで ▲▲▲
+    // ====================================================================
+
+    // ====================================================================
+    // ▼▼▼ 検索モード判定 (検索結果のみフィルター表示) ▼▼▼
+    // ====================================================================
+    (function setupSearchModeIndicator() {
+      function updateSearchMode() {
+        const params = new URLSearchParams(window.location.search);
+        const isSearch = !!params.get('q');
+        document.body.classList.toggle('is-search', isSearch);
+        if (window.__applyFilters) window.__applyFilters();
+      }
+      // 初期化
+      updateSearchMode();
+      // URL変更時 (popstate / pushState を間接的に拾うため定期チェック)
+      let lastUrl = location.href;
+      setInterval(() => {
+        if (location.href !== lastUrl) {
+          lastUrl = location.href;
+          updateSearchMode();
+        }
+      }, 300);
+      window.addEventListener('popstate', updateSearchMode);
+    })();
+    // ====================================================================
+    // ▲▲▲ 検索モード判定 ここまで ▲▲▲
+    // ====================================================================
+
+    // ====================================================================
+    // ▼▼▼ 通知ベル パネル ▼▼▼
+    // ====================================================================
+    (function setupNotificationPanel() {
+      const NOTIFY_STORAGE_KEY = 'mts_notifications';
+      const MAX_NOTIFICATIONS = 50;
+
+      const btn = document.getElementById('notifyBtn');
+      const panel = document.getElementById('notifyPanel');
+      const body = document.getElementById('notifyPanelBody');
+      const empty = document.getElementById('notifyEmpty');
+      const badge = document.getElementById('notifyBadge');
+      const clearBtn = document.getElementById('notifyClearBtn');
+      if (!btn || !panel || !body) return;
+
+      function load() {
+        try {
+          const raw = localStorage.getItem(NOTIFY_STORAGE_KEY);
+          const arr = raw ? JSON.parse(raw) : [];
+          return Array.isArray(arr) ? arr : [];
+        } catch { return []; }
+      }
+      function save(list) {
+        try {
+          localStorage.setItem(NOTIFY_STORAGE_KEY, JSON.stringify(list.slice(0, MAX_NOTIFICATIONS)));
+        } catch {}
+      }
+
+      function timeAgo(ts) {
+        const diff = Math.floor((Date.now() - ts) / 1000);
+        if (diff < 60) return 'たった今';
+        if (diff < 3600) return `${Math.floor(diff/60)}分前`;
+        if (diff < 86400) return `${Math.floor(diff/3600)}時間前`;
+        if (diff < 604800) return `${Math.floor(diff/86400)}日前`;
+        const d = new Date(ts);
+        return `${d.getMonth()+1}/${d.getDate()}`;
+      }
+
+      function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({
+          '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[c]));
+      }
+
+      function render() {
+        const list = load();
+        const unreadCount = list.filter(n => !n.read).length;
+
+        // バッジ更新
+        if (unreadCount > 0) {
+          badge.style.display = 'flex';
+          badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+        } else {
+          badge.style.display = 'none';
+        }
+
+        // 既存のアイテム削除（emptyは残す）
+        Array.from(body.querySelectorAll('.notify-item')).forEach(el => el.remove());
+
+        if (list.length === 0) {
+          empty.style.display = '';
+          return;
+        }
+        empty.style.display = 'none';
+
+        list.forEach(item => {
+          const a = document.createElement('a');
+          a.className = 'notify-item' + (item.read ? '' : ' unread');
+          a.href = '/video/' + encodeURIComponent(item.id);
+          a.dataset.id = item.id;
+          a.innerHTML = `
+            <div class="notify-item-thumb">
+              <img src="https://i.ytimg.com/vi/${encodeURIComponent(item.id)}/mqdefault.jpg" alt="" loading="lazy">
+            </div>
+            <div class="notify-item-body">
+              <div class="notify-item-ch">${escapeHtml(item.channel)} • 新しい動画</div>
+              <div class="notify-item-title">${escapeHtml(item.title)}</div>
+              <div class="notify-item-time">${timeAgo(item.ts)}</div>
+            </div>
+            <button class="notify-item-remove" type="button" aria-label="削除" title="削除">
+              <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+          `;
+          a.addEventListener('click', (e) => {
+            // 既読化
+            const all = load();
+            const target = all.find(n => n.id === item.id && n.ts === item.ts);
+            if (target) { target.read = true; save(all); }
+          });
+          const rm = a.querySelector('.notify-item-remove');
+          rm.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const all = load();
+            save(all.filter(n => !(n.id === item.id && n.ts === item.ts)));
+            render();
+          });
+          body.appendChild(a);
+        });
+      }
+
+      // 公開API: 新着通知を追加
+      window.addAppNotification = function(notif) {
+        if (!notif || !notif.id) return;
+        const list = load();
+        // 同じ動画ID は重複排除
+        if (list.some(n => n.id === notif.id)) return;
+        list.unshift({
+          id: notif.id,
+          title: notif.title || '',
+          channel: notif.channel || '',
+          ts: Date.now(),
+          read: false
+        });
+        save(list);
+        render();
+      };
+
+      // ボタン開閉
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = !panel.classList.contains('open');
+        panel.classList.toggle('open', open);
+        if (open) {
+          // 開いたら全件既読化
+          const list = load();
+          let changed = false;
+          list.forEach(n => { if (!n.read) { n.read = true; changed = true; } });
+          if (changed) save(list);
+          render();
+        }
+      });
+      panel.addEventListener('click', (e) => e.stopPropagation());
+      document.addEventListener('click', (e) => {
+        if (!btn.contains(e.target) && !panel.contains(e.target)) {
+          panel.classList.remove('open');
+        }
+      });
+
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          if (load().length === 0) return;
+          if (confirm('すべての通知を削除しますか？')) {
+            save([]);
+            render();
+          }
+        });
+      }
+
+      // 初期描画
+      render();
+    })();
+    // ====================================================================
+    // ▲▲▲ 通知ベル パネル ここまで ▲▲▲
     // ====================================================================
 
   </script>
