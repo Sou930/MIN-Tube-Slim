@@ -2,7 +2,7 @@
 
 「MIN-Tube-Slim」は、YouTube や動画視聴をより快適にするための Web アプリです。  
 ブラウザからすぐにアクセスでき、PC・スマホ問わず軽量に動作することを目指しています。
-Min-Tube-Proの独自派生です
+MIN-Tube の独自派生です
 
 ### デモ
 https://min-tube-slim.duckdns.org

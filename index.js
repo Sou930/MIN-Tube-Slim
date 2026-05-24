@@ -5,9 +5,27 @@ const fetch = require("node-fetch");
 const cookieParser = require("cookie-parser");
 const https = require("https");
 const fs = require('fs');
+const compression = require("compression");
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// ──────────────────────────────────────────────────────────────────────────
+// パフォーマンス最適化
+//  - gzip/deflate 圧縮で転送量を削減
+//  - ETag を有効化 (デフォルト ON だが明示)
+//  - x-powered-by ヘッダを無効化 (微小な節約)
+// ──────────────────────────────────────────────────────────────────────────
+app.disable('x-powered-by');
+app.set('etag', 'strong');
+app.use(compression({
+  level: 6,            // 圧縮率と CPU のバランス
+  threshold: 1024,     // 1KB 未満は圧縮しない
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  }
+}));
 
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
@@ -30,7 +48,25 @@ const keys = [
   process.env.RAPIDAPI_KEY_3 || '41c9265bc6msha0fa7dfc1a63eabp18bf7cjsne6ef10b79b38'
 ];
 
-app.use(express.static(path.join(__dirname, "public")));
+// 静的ファイル配信: ブラウザキャッシュを有効化して再読み込みを高速化
+app.use(express.static(path.join(__dirname, "public"), {
+  maxAge: '7d',         // 画像/CSS/JS は 7 日キャッシュ
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    // HTML は短めに (更新を反映しやすくする)
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
+    } else if (/\.(?:css|js|woff2?|ttf|eot|png|jpe?g|gif|webp|svg|ico)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    }
+  }
+}));
+// img ディレクトリも長期キャッシュ
+app.use('/img', express.static(path.join(__dirname, 'img'), {
+  maxAge: '30d',
+  immutable: true,
+}));
 app.use(cookieParser());
 
 let apiListCache = [];
@@ -204,7 +240,13 @@ setInterval(() => {
 
 // --- API ENDPOINTS ---
 
+// HTML 用の軽量キャッシュ (5 分間) — ナビゲーションを高速化
+const htmlCacheHeaders = (res) => {
+  res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
+};
+
 app.get("/", (req, res) => {
+  htmlCacheHeaders(res);
   res.sendFile(path.join(__dirname, "public", "home.html"));
 });
 
@@ -1593,11 +1635,11 @@ app.get('/ai-fetch/:videoId', async (req, res) => {
 });
 
 app.get("/youtube-pro", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "min-tube-pro.html"));
+  res.sendFile(path.join(__dirname, "public", "min-tube-slim.html"));
 });
 
 app.get("/min-img.png", (req, res) => {
-  const filePath = path.join(__dirname, "img", "min-tube-pro.png");
+  const filePath = path.join(__dirname, "img", "min-tube-slim.png");
   res.sendFile(filePath);
 });
 
@@ -1988,7 +2030,10 @@ app.get("/manifest.json", (req, res) => {
 });
 
 app.get("/sw.js", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "sw.js"));
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.sendFile(path.join(__dirname, "sw.js"));
 });
 
 app.get("/api/channel", async (req, res) => {
@@ -2043,7 +2088,7 @@ app.get("/channel/:channelName", (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${channelName} - MIN-Tube-Pro</title>
+  <title>${channelName} - MIN-Tube-Slim</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <style>
@@ -2693,7 +2738,7 @@ const calculateScore = (v) => {
 };
 
 app.get('/check-version', async (req, res) => {
-    const remoteUrl = 'https://raw.githubusercontent.com/mino-hobby-pro/MIN-Tube-Pro/refs/heads/main/public/raw/version.json';
+    const remoteUrl = 'https://raw.githubusercontent.com/Sou930/MIN-Tube-Slim/refs/heads/main/public/raw/version.json';
     const localPath = path.join(__dirname, 'public', 'raw', 'version.json');
 
     try {
