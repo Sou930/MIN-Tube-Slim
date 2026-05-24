@@ -1310,6 +1310,36 @@ body.light-mode .notify-item-remove:hover { background: rgba(0,0,0,0.08); }
       </div>
     </div>
 
+    <!-- 自動プレイリスト作成モーダル -->
+    <div id="autoPlModal" class="modal-overlay" onclick="if(event.target===this)closeAutoPl()">
+      <div class="modal" style="max-width:440px;">
+        <div class="modal-title">キーワードから自動作成</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px;line-height:1.6;">
+          ジャンルや言葉を入力すると、YouTube から自動で動画を集めて<br>
+          新しい再生リストを作成します。
+        </div>
+        <input class="modal-input" id="autoPlKeyword" type="text" placeholder="例: 邦楽 ロック, lo-fi, ゲーム実況" maxlength="80">
+        <div style="font-size:12px;color:var(--text-muted);margin:6px 0 10px;">
+          複数指定する場合はカンマ区切り（最大 5 個）
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <label for="autoPlLimit" style="font-size:13px;color:var(--text-muted);">動画数:</label>
+          <select id="autoPlLimit" style="background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:13px;">
+            <option value="10">10 本</option>
+            <option value="20" selected>20 本</option>
+            <option value="30">30 本</option>
+            <option value="50">50 本</option>
+          </select>
+        </div>
+        <input class="modal-input" id="autoPlName" type="text" placeholder="再生リスト名 (空欄ならキーワードで自動命名)" maxlength="40">
+        <div id="autoPlStatus" style="display:none;font-size:13px;color:var(--text-muted);margin:8px 0 0;text-align:center;"></div>
+        <div class="modal-btn-row">
+          <button class="modal-btn cancel" onclick="closeAutoPl()">キャンセル</button>
+          <button class="modal-btn confirm" id="autoPlBtn" onclick="doAutoPlaylist()">自動作成</button>
+        </div>
+      </div>
+    </div>
+
     <main class="main">
       <div class="chips-bar" id="chipsBar">
         <button class="chip active" data-q="recommended">すべて</button>
@@ -2556,9 +2586,12 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
 
     function renderPlaylistsDrawer(body) {
       const pls = getPlaylists();
-      const actRow = `<div class="drawer-action-row">
+      const actRow = `<div class="drawer-action-row" style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn-create-playlist" onclick="openCreatePl()">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>新しい再生リスト
+        </button>
+        <button class="btn-create-playlist" style="background:#3ea6ff;color:#0f0f0f;" onclick="openAutoPl()" title="ジャンルやキーワードで自動作成">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 3l1.9 5.8H20l-5 3.6 1.9 5.8L12 14.7l-4.9 3.5L9 12.4 4 8.8h6.1L12 3z"/></svg>キーワードから自動作成
         </button>
       </div>`;
       if (!pls.length) {
@@ -2624,6 +2657,82 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
     window.openCreatePl = openCreatePl;
     window.closeCreatePl = closeCreatePl;
     window.doCreatePlaylist = doCreatePlaylist;
+
+    // --- 自動プレイリスト作成 ---
+    function openAutoPl() {
+      const m = document.getElementById('autoPlModal');
+      document.getElementById('autoPlKeyword').value = '';
+      document.getElementById('autoPlName').value = '';
+      document.getElementById('autoPlLimit').value = '20';
+      const s = document.getElementById('autoPlStatus');
+      s.style.display = 'none';
+      s.textContent = '';
+      const btn = document.getElementById('autoPlBtn');
+      btn.disabled = false;
+      btn.textContent = '自動作成';
+      m.classList.add('open');
+      setTimeout(() => document.getElementById('autoPlKeyword').focus(), 50);
+    }
+    function closeAutoPl() { document.getElementById('autoPlModal').classList.remove('open'); }
+    async function doAutoPlaylist() {
+      const kw = document.getElementById('autoPlKeyword').value.trim();
+      const limit = parseInt(document.getElementById('autoPlLimit').value, 10) || 20;
+      let name = document.getElementById('autoPlName').value.trim();
+      if (!kw) {
+        showToast('キーワードを入力してください');
+        return;
+      }
+      const btn = document.getElementById('autoPlBtn');
+      const status = document.getElementById('autoPlStatus');
+      btn.disabled = true;
+      btn.textContent = '作成中…';
+      status.style.display = 'block';
+      status.textContent = '動画を検索中…';
+      try {
+        const r = await fetch('/api/auto-playlist?q=' + encodeURIComponent(kw) + '&limit=' + limit);
+        const data = await r.json();
+        if (!r.ok || !data.items || data.items.length === 0) {
+          status.textContent = '動画が見つかりませんでした。キーワードを変えてお試しください。';
+          btn.disabled = false;
+          btn.textContent = '自動作成';
+          return;
+        }
+        if (!name) name = kw + ' (自動)';
+        const pl = addPlaylist(name);
+        // トースト連発を避けるため、ここでは直接配列を操作して保存
+        const allPls = getPlaylists();
+        const target = allPls.find(p => p.id === pl.id);
+        let added = 0;
+        if (target) {
+          const seen = new Set(target.items.map(x => x.id));
+          for (const it of data.items) {
+            if (seen.has(it.id)) continue;
+            target.items.push({
+              id: it.id,
+              title: it.title,
+              channel: it.channel,
+              views: it.views,
+              published: it.published,
+              ts: Date.now()
+            });
+            seen.add(it.id);
+            added++;
+          }
+          savePlaylists(allPls);
+        }
+        showToast(`「${name}」に ${added} 本の動画を追加しました ✅`);
+        closeAutoPl();
+        openDrawer('playlistDetail', pl.id);
+      } catch (e) {
+        console.error(e);
+        status.textContent = '通信エラーが発生しました。';
+        btn.disabled = false;
+        btn.textContent = '自動作成';
+      }
+    }
+    window.openAutoPl = openAutoPl;
+    window.closeAutoPl = closeAutoPl;
+    window.doAutoPlaylist = doAutoPlaylist;
 
     // --- Playlist picker modal (from card menu) ---
     let _ddItem = null;
