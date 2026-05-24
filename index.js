@@ -2178,11 +2178,21 @@ app.get("/channel/:channelName", (req, res) => {
       background:var(--card); border:none; color:var(--text);
       width:36px; height:36px; border-radius:50%;
       display:none; align-items:center; justify-content:center;
-      cursor:pointer; transition:background .15s;
+      cursor:pointer; transition:background .15s, transform .2s;
+      position:relative;
     }
     .btn-notify.show { display:flex; }
     .btn-notify:hover { background:var(--hover); }
-    .btn-notify svg { width:20px; height:20px; fill:var(--text); }
+    .btn-notify svg { width:20px; height:20px; fill:var(--text); transition:transform .2s; }
+    .btn-notify.notify-on { background:var(--card); }
+    .btn-notify.notify-on svg { fill:#ff4081; animation: bell-ring 0.6s ease; }
+    @keyframes bell-ring {
+      0%,100% { transform: rotate(0); }
+      20% { transform: rotate(-15deg); }
+      40% { transform: rotate(12deg); }
+      60% { transform: rotate(-8deg); }
+      80% { transform: rotate(5deg); }
+    }
 
     /* ===== TABS ===== */
     .channel-tabs-wrap {
@@ -2318,8 +2328,8 @@ app.get("/channel/:channelName", (req, res) => {
       <div class="channel-description" id="channelDescription"></div>
       <div class="channel-actions">
         <button class="btn-subscribe" id="subscribeBtn" onclick="toggleSubscribe()">チャンネル登録</button>
-        <button class="btn-notify" id="notifyBtn" aria-label="通知">
-          <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+        <button class="btn-notify" id="notifyBtn" aria-label="通知" title="通知を受け取る" onclick="toggleNotify()">
+          <svg id="notifyIconOff" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
         </button>
       </div>
     </div>
@@ -2351,6 +2361,9 @@ app.get("/channel/:channelName", (req, res) => {
 
   // 既存：チャンネル登録管理
   const SUB_KEY = 'subscribed_' + CHANNEL_NAME;
+  const NOTIFY_KEY = 'notify_' + CHANNEL_NAME;
+  const BELL_ON_SVG = '<svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>';
+  const BELL_OFF_SVG = '<svg viewBox="0 0 24 24"><path d="M20 18.69L7.84 6.14 5.27 3.49 4 4.76l2.8 2.8v.01c-.52.99-.8 2.16-.8 3.42v5l-2 2v1h13.73l2 2L21 19.72l-1-1.03zM12 22c1.11 0 2-.89 2-2h-4c0 1.11.89 2 2 2zm6-7.32V11c0-3.08-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68c-.15.03-.29.08-.42.12-.1.03-.2.07-.3.11h-.01c-.01 0-.01 0-.02.01-.23.09-.46.18-.68.29 0 0-.01 0-.01.01L18 14.68z"/></svg>';
   function updateSubscribeUI() {
     const isSub = localStorage.getItem(SUB_KEY) === 'true';
     const btn = document.getElementById('subscribeBtn');
@@ -2364,11 +2377,28 @@ app.get("/channel/:channelName", (req, res) => {
       btn.classList.remove('subscribed');
       if(notifyBtn) notifyBtn.classList.remove('show');
     }
+    updateNotifyUI();
+  }
+  function updateNotifyUI() {
+    const notifyBtn = document.getElementById('notifyBtn');
+    if (!notifyBtn) return;
+    const isOn = localStorage.getItem(NOTIFY_KEY) === 'true';
+    if (isOn) {
+      notifyBtn.classList.add('notify-on');
+      notifyBtn.innerHTML = BELL_ON_SVG;
+      notifyBtn.title = '通知をオフにする';
+    } else {
+      notifyBtn.classList.remove('notify-on');
+      notifyBtn.innerHTML = BELL_OFF_SVG;
+      notifyBtn.title = '通知を受け取る';
+    }
   }
   function toggleSubscribe() {
     const isSub = localStorage.getItem(SUB_KEY) === 'true';
     if (isSub) {
       localStorage.removeItem(SUB_KEY);
+      // 登録解除時は通知設定も解除
+      localStorage.removeItem(NOTIFY_KEY);
     } else {
       localStorage.setItem(SUB_KEY, 'true');
       // メタ情報も保存（登録チャンネル一覧ページで使用）
@@ -2383,6 +2413,20 @@ app.get("/channel/:channelName", (req, res) => {
     }
     updateSubscribeUI();
   }
+  async function toggleNotify() {
+    const isOn = localStorage.getItem(NOTIFY_KEY) === 'true';
+    if (isOn) {
+      localStorage.removeItem(NOTIFY_KEY);
+    } else {
+      // ブラウザ通知の許可をリクエスト（任意）
+      if ('Notification' in window && Notification.permission === 'default') {
+        try { await Notification.requestPermission(); } catch (e) {}
+      }
+      localStorage.setItem(NOTIFY_KEY, 'true');
+    }
+    updateNotifyUI();
+  }
+  window.toggleNotify = toggleNotify;
 
   // 既存：フォーマット関数
   function formatViews(v) {
