@@ -1,7 +1,7 @@
 {
-  "name": "min-tube-slim",
-  "version": "1.3.0",
-  "description": "MIN-Tube-Slim is a smart, lightweight youtube watcher",
+  "name": "min-tube-2",
+  "version": "1.2.0",
+  "description": "MIN-Tube2 is smart youtube watcher",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
