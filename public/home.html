@@ -826,6 +826,81 @@
   flex-shrink: 0; 
 }
 
+/* ===== 検索フィルター強化 + カード表示切替 ===== */
+.filter-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 12px 24px; border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.filter-bar .filter-label {
+  font-size: 12px; color: var(--text-muted); margin-right: 4px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.filter-bar select, .filter-bar .filter-btn {
+  background: var(--chip-bg); color: var(--text); border: 1px solid var(--border);
+  border-radius: 18px; padding: 6px 12px; font-size: 13px; cursor: pointer;
+  outline: none; transition: background 0.15s, border-color 0.15s;
+  height: 32px;
+}
+.filter-bar select:hover, .filter-bar .filter-btn:hover { background: var(--border); }
+.filter-bar select:focus { border-color: var(--accent); }
+.filter-bar .filter-reset {
+  background: transparent; border: none; color: var(--accent);
+  font-size: 13px; cursor: pointer; padding: 4px 8px;
+}
+.filter-bar .filter-reset:hover { text-decoration: underline; }
+.filter-bar .view-toggle {
+  display: inline-flex; background: var(--chip-bg); border: 1px solid var(--border);
+  border-radius: 18px; overflow: hidden; margin-left: auto;
+}
+.filter-bar .view-toggle button {
+  background: transparent; color: var(--text-muted); border: none;
+  padding: 6px 12px; font-size: 13px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: background 0.15s, color 0.15s;
+}
+.filter-bar .view-toggle button.active {
+  background: var(--text); color: var(--bg); font-weight: 600;
+}
+.filter-bar .view-toggle button:hover:not(.active) { background: var(--border); color: var(--text); }
+.filter-bar .view-toggle svg { width: 14px; height: 14px; }
+.filter-count {
+  font-size: 12px; color: var(--text-muted); margin-left: 4px;
+}
+
+/* List view */
+.video-grid.view-list {
+  display: flex; flex-direction: column; gap: 16px; row-gap: 16px;
+}
+.video-grid.view-list .video-card { flex-direction: row; gap: 16px; }
+.video-grid.view-list .thumb { width: 360px; flex-shrink: 0; margin-bottom: 0; }
+.video-grid.view-list .meta { flex: 1; align-items: flex-start; }
+.video-grid.view-list .details h3 { font-size: 16px; -webkit-line-clamp: 2; }
+.video-grid.view-list .channel-avatar { display: none; }
+@media (max-width: 700px) {
+  .video-grid.view-list .video-card { flex-direction: column; gap: 0; }
+  .video-grid.view-list .thumb { width: 100%; }
+}
+
+/* Compact view */
+.video-grid.view-compact {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px 10px; row-gap: 20px;
+}
+.video-grid.view-compact .thumb { margin-bottom: 6px; border-radius: 8px; }
+.video-grid.view-compact .channel-avatar { width: 28px; height: 28px; font-size: 11px; }
+.video-grid.view-compact .details h3 { font-size: 13px; -webkit-line-clamp: 2; }
+.video-grid.view-compact .details .channel-name,
+.video-grid.view-compact .details .video-stats { font-size: 11px; }
+.video-grid.view-compact .card-menu-btn { display: none; }
+
+@media (max-width: 768px) {
+  .filter-bar { padding: 10px 16px; gap: 8px; }
+  .filter-bar .view-toggle { margin-left: 0; }
+  .filter-bar .filter-label { display: none; }
+}
+.video-card.filtered-hidden { display: none !important; }
+
 .extra-link {
   display: flex;
   align-items: center;
@@ -1098,6 +1173,50 @@
         <button class="chip" data-q="ゲーム">ゲーム</button>
         <button class="chip" data-q="エンタメ">エンタメ</button>
         <button class="chip" data-q="最新テクノロジー">テック</button>
+      </div>
+
+      <!-- 検索フィルター強化 + カード表示切替 -->
+      <div class="filter-bar" id="filterBar">
+        <span class="filter-label">タイプ</span>
+        <select id="filterType" aria-label="タイプ">
+          <option value="all">すべて</option>
+          <option value="video">動画のみ</option>
+          <option value="channel">チャンネル</option>
+          <option value="playlist">再生リスト</option>
+          <option value="short">ショート (#)</option>
+          <option value="long">通常動画のみ</option>
+        </select>
+        <span class="filter-label">長さ</span>
+        <select id="filterDuration" aria-label="長さ">
+          <option value="any">指定なし</option>
+          <option value="short">4分以下</option>
+          <option value="medium">4〜20分</option>
+          <option value="long">20分以上</option>
+        </select>
+        <span class="filter-label">並び替え</span>
+        <select id="filterSort" aria-label="並び替え">
+          <option value="default">関連度</option>
+          <option value="views">再生回数 (多い順)</option>
+          <option value="date">投稿日 (新しい順)</option>
+          <option value="title">タイトル (A〜Z)</option>
+        </select>
+        <button class="filter-reset" id="filterReset" type="button">リセット</button>
+        <span class="filter-count" id="filterCount"></span>
+
+        <div class="view-toggle" role="group" aria-label="表示切替">
+          <button data-view="grid" class="active" title="グリッド表示" aria-label="グリッド">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>
+            <span>グリッド</span>
+          </button>
+          <button data-view="list" title="リスト表示" aria-label="リスト">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v3H3V5zm0 5h18v3H3v-3zm0 5h18v3H3v-3z"/></svg>
+            <span>リスト</span>
+          </button>
+          <button data-view="compact" title="コンパクト表示" aria-label="コンパクト">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h5v5H3V3zm7 0h5v5h-5V3zm7 0h4v5h-4V3zM3 10h5v4H3v-4zm7 0h5v4h-5v-4zm7 0h4v4h-4v-4zM3 16h5v5H3v-5zm7 0h5v5h-5v-5zm7 0h4v5h-4v-5z"/></svg>
+            <span>コンパクト</span>
+          </button>
+        </div>
       </div>
 
       <div class="content-area">
@@ -2635,6 +2754,167 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
     })();
     // ====================================================================
     // ▲▲▲ 登録チャンネルの新着動画通知システム ここまで ▲▲▲
+    // ====================================================================
+
+    // ====================================================================
+    // ▼▼▼ 検索フィルター強化 + カード表示切替 ▼▼▼
+    // ====================================================================
+    (function setupFiltersAndViews() {
+      const grid = document.getElementById('videoGrid');
+      const fType = document.getElementById('filterType');
+      const fDur  = document.getElementById('filterDuration');
+      const fSort = document.getElementById('filterSort');
+      const fReset = document.getElementById('filterReset');
+      const fCount = document.getElementById('filterCount');
+      const viewButtons = document.querySelectorAll('.view-toggle button');
+      if (!grid || !fType || !fDur || !fSort) return;
+
+      // --- 表示モードの永続化 ---
+      const VIEW_KEY = 'mts:gridView';
+      function applyView(view) {
+        grid.classList.remove('view-grid', 'view-list', 'view-compact');
+        grid.classList.add('view-' + view);
+        viewButtons.forEach(b => b.classList.toggle('active', b.dataset.view === view));
+        try { localStorage.setItem(VIEW_KEY, view); } catch(e) {}
+      }
+      let savedView = 'grid';
+      try { savedView = localStorage.getItem(VIEW_KEY) || 'grid'; } catch(e) {}
+      applyView(savedView);
+      viewButtons.forEach(b => b.addEventListener('click', () => applyView(b.dataset.view)));
+
+      // --- 長さ(分)を抽出 ---
+      function parseLengthToSeconds(text) {
+        if (!text) return null;
+        const parts = String(text).split(':').map(s => parseInt(s, 10));
+        if (parts.some(isNaN)) return null;
+        if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+        if (parts.length === 2) return parts[0]*60 + parts[1];
+        if (parts.length === 1) return parts[0];
+        return null;
+      }
+      // 再生数の数値化
+      function parseViews(text) {
+        if (!text) return 0;
+        const m = String(text).replace(/,/g, '').match(/([\d.]+)\s*([万億千KMB])?/i);
+        if (!m) return 0;
+        let n = parseFloat(m[1]);
+        const unit = m[2];
+        if (unit === '万') n *= 10000;
+        else if (unit === '億') n *= 100000000;
+        else if (unit === '千') n *= 1000;
+        else if (/k/i.test(unit||'')) n *= 1000;
+        else if (/m/i.test(unit||'')) n *= 1000000;
+        else if (/b/i.test(unit||'')) n *= 1000000000;
+        return Math.floor(n);
+      }
+      // 投稿日テキストを「最近からの秒数」へ
+      function parsePublished(text) {
+        if (!text) return Infinity;
+        const t = String(text);
+        const m = t.match(/(\d+)\s*(秒|分|時間|日|週間|か月|ヶ月|カ月|年|second|minute|hour|day|week|month|year)/i);
+        if (!m) return Infinity;
+        const n = parseInt(m[1], 10);
+        const u = m[2];
+        const mul = {
+          '秒':1,'second':1,'分':60,'minute':60,'時間':3600,'hour':3600,
+          '日':86400,'day':86400,'週間':604800,'week':604800,
+          'か月':2592000,'ヶ月':2592000,'カ月':2592000,'month':2592000,
+          '年':31536000,'year':31536000
+        };
+        const key = Object.keys(mul).find(k => u.toLowerCase().startsWith(k.toLowerCase())) || u;
+        return n * (mul[key] || mul[u] || 0);
+      }
+
+      function applyFilters() {
+        const tVal = fType.value;
+        const dVal = fDur.value;
+        const sVal = fSort.value;
+        const cards = Array.from(grid.children);
+        const visible = [];
+        cards.forEach(card => {
+          // タイプ判定
+          const isChannel = card.classList.contains('channel-result-card');
+          const isPlaylist = card.classList.contains('playlist-card-result');
+          let cardType = 'video';
+          if (isChannel) cardType = 'channel';
+          else if (isPlaylist) cardType = 'playlist';
+
+          const title = (card.querySelector('h3')?.textContent || '').trim();
+          const isShort = title.includes('#');
+          const lenText = card.querySelector('.duration-badge')?.textContent || '';
+          const seconds = parseLengthToSeconds(lenText);
+          const statsText = card.querySelector('.video-stats')?.textContent || '';
+          // 再生数と投稿日を分離 ("123,456 回視聴 • 2日前")
+          const [viewPart, datePart] = statsText.split('•').map(s => s.trim());
+          const views = parseViews(viewPart);
+          const ageSec = parsePublished(datePart || viewPart);
+
+          let show = true;
+          // タイプフィルター
+          if (tVal === 'video' && cardType !== 'video') show = false;
+          else if (tVal === 'channel' && cardType !== 'channel') show = false;
+          else if (tVal === 'playlist' && cardType !== 'playlist') show = false;
+          else if (tVal === 'short' && (cardType !== 'video' || !isShort)) show = false;
+          else if (tVal === 'long' && (cardType !== 'video' || isShort)) show = false;
+
+          // 長さフィルター (動画のみ適用)
+          if (show && cardType === 'video' && dVal !== 'any' && seconds !== null) {
+            if (dVal === 'short' && seconds > 240) show = false;
+            if (dVal === 'medium' && (seconds <= 240 || seconds > 1200)) show = false;
+            if (dVal === 'long' && seconds <= 1200) show = false;
+          } else if (show && cardType === 'video' && dVal !== 'any' && seconds === null) {
+            // 長さ不明な動画は除外
+            show = false;
+          }
+
+          card.classList.toggle('filtered-hidden', !show);
+          if (show) visible.push({ el: card, type: cardType, title, views, ageSec, seconds });
+        });
+
+        // ソート (チャンネル/プレイリストはそのまま末尾、動画のみ並び替え)
+        if (sVal !== 'default') {
+          const videos = visible.filter(v => v.type === 'video').map(v => v.el);
+          const others = visible.filter(v => v.type !== 'video').map(v => v.el);
+          videos.sort((a, b) => {
+            const va = visible.find(x => x.el === a);
+            const vb = visible.find(x => x.el === b);
+            if (sVal === 'views')  return vb.views - va.views;
+            if (sVal === 'date')   return va.ageSec - vb.ageSec;
+            if (sVal === 'title')  return va.title.localeCompare(vb.title, 'ja');
+            return 0;
+          });
+          // DOMを並び替え
+          [...videos, ...others].forEach(el => grid.appendChild(el));
+        }
+
+        if (fCount) {
+          const total = cards.filter(c => c.classList.contains('video-card')).length;
+          const shown = visible.length;
+          fCount.textContent = (shown !== total) ? `${shown}/${total} 件表示中` : `${total} 件`;
+        }
+      }
+
+      fType.addEventListener('change', applyFilters);
+      fDur.addEventListener('change', applyFilters);
+      fSort.addEventListener('change', applyFilters);
+      if (fReset) fReset.addEventListener('click', () => {
+        fType.value = 'all'; fDur.value = 'any'; fSort.value = 'default';
+        applyFilters();
+      });
+
+      // 検索結果が更新されるたびにフィルターを再適用
+      const obs = new MutationObserver(() => {
+        // 短時間に複数発火するため軽くデバウンス
+        clearTimeout(window.__filterDebounce);
+        window.__filterDebounce = setTimeout(applyFilters, 120);
+      });
+      obs.observe(grid, { childList: true });
+
+      // 公開: 外部から強制適用したい時用
+      window.__applyFilters = applyFilters;
+    })();
+    // ====================================================================
+    // ▲▲▲ 検索フィルター強化 + カード表示切替 ここまで ▲▲▲
     // ====================================================================
 
   </script>
