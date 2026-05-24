@@ -1,7 +1,7 @@
-// MIN-Tube-Slim Service Worker v1.3.0
-const CACHE_NAME = 'min-tube-slim-v2';
+// MIN-Tube-Pro Service Worker
+const CACHE_NAME = 'min-tube-pro-v1';
 const PRECACHE = [
-  '/public/min-tube-slim.html',
+  '/public/min-tube-pro.html',
   '/img/min-tube-pro.png',
 ];
 
@@ -27,10 +27,8 @@ self.addEventListener('activate', event => {
 
 // フェッチ: キャッシュファースト → ネットワーク → オフラインフォールバック
 self.addEventListener('fetch', event => {
+  // POST等は無視
   if (event.request.method !== 'GET') return;
-
-  // 通知チェックAPIはキャッシュしない
-  if (event.request.url.includes('/api/channel-latest')) return;
 
   event.respondWith(
     caches.match(event.request).then(cached => {
@@ -38,6 +36,7 @@ self.addEventListener('fetch', event => {
 
       return fetch(event.request)
         .then(response => {
+          // 正常レスポンスをキャッシュに追加
           if (response && response.status === 200 && response.type === 'basic') {
             const clone = response.clone();
             caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
@@ -45,27 +44,11 @@ self.addEventListener('fetch', event => {
           return response;
         })
         .catch(() => {
+          // オフライン時: ナビゲーションはトップページを返す
           if (event.request.mode === 'navigate') {
             return caches.match('/');
           }
         });
     })
   );
-});
-
-// プッシュ通知ハンドラ
-self.addEventListener('push', event => {
-  if (!event.data) return;
-  const data = event.data.json();
-  self.registration.showNotification(data.title, {
-    body: data.body,
-    icon: '/img/min-tube-pro.png',
-    badge: '/img/min-tube-pro.png',
-    data: { url: data.url || '/' }
-  });
-});
-
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data.url || '/'));
 });
