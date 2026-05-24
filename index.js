@@ -804,6 +804,63 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
         .spinner { border: 4px solid rgba(255, 255, 255, 0.1); width: 50px; height: 50px; border-radius: 50%; border-top-color: var(--yt-red); animation: spin 1s ease-in-out infinite; margin-bottom: 16px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @media (max-width: 1000px) { .container { flex-direction: column; padding: 0; } .sidebar { width: 100%; padding: 16px; box-sizing: border-box; } .player-container { border-radius: 0; } .main-content { padding: 16px; } }
+
+        /* === シアターモード === */
+        body.theater-mode { overflow-x: hidden; }
+        body.theater-mode .container { max-width: 100%; padding: 0; flex-direction: column; gap: 0; }
+        body.theater-mode .main-content { flex: none; width: 100%; padding: 0; }
+        body.theater-mode .player-container { width: 100%; max-width: 100%; aspect-ratio: auto; height: min(85vh, calc(100vw * 9/16)); border-radius: 0; }
+        body.theater-mode .video-title,
+        body.theater-mode .owner-row,
+        body.theater-mode .description-box,
+        body.theater-mode .comments-section,
+        body.theater-mode .hashtag-bar { max-width: 1700px; margin-left: auto; margin-right: auto; padding-left: 24px; padding-right: 24px; box-sizing: border-box; }
+        body.theater-mode .sidebar { width: 100%; max-width: 1700px; margin: 0 auto; padding: 24px; box-sizing: border-box; }
+        @media (max-width: 1000px) {
+          body.theater-mode .video-title,
+          body.theater-mode .owner-row,
+          body.theater-mode .description-box,
+          body.theater-mode .comments-section,
+          body.theater-mode .hashtag-bar,
+          body.theater-mode .sidebar { padding-left: 16px; padding-right: 16px; }
+        }
+
+        /* === 関連ハッシュタグ === */
+        .hashtag-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
+        .hashtag-chip { background: var(--bg-secondary); color: #3ea6ff; padding: 6px 12px; border-radius: 16px; font-size: 13px; font-weight: 500; text-decoration: none; transition: background 0.15s ease; border: 1px solid transparent; }
+        .hashtag-chip:hover { background: var(--bg-hover); }
+        .hashtag-bar:empty { display: none; }
+
+        /* === 動画下部アクション拡張 === */
+        .action-btn.toggle-on { background: #3ea6ff; color: #0f0f0f; }
+        .download-menu-wrap { position: relative; display: inline-block; }
+        .download-menu { display: none; position: absolute; right: 0; top: calc(100% + 6px); background: var(--bg-secondary); border-radius: 10px; min-width: 220px; box-shadow: 0 6px 18px rgba(0,0,0,0.5); z-index: 250; overflow: hidden; border: 1px solid #333; }
+        .download-menu.show { display: block; }
+        .download-menu .dm-header { padding: 10px 14px; font-size: 12px; color: var(--text-sub); border-bottom: 1px solid #333; }
+        .download-menu a { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; color: var(--text-main); text-decoration: none; font-size: 14px; transition: background 0.15s; }
+        .download-menu a:hover { background: var(--bg-hover); }
+        .download-menu a .dm-badge { font-size: 11px; color: var(--text-sub); }
+        .download-menu .dm-empty { padding: 12px 14px; font-size: 13px; color: var(--text-sub); }
+        .action-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+        /* === 自動再生ピル === */
+        .autoplay-pill { display: inline-flex; align-items: center; gap: 8px; background: var(--bg-secondary); color: var(--text-main); padding: 6px 12px; border-radius: 18px; cursor: pointer; font-size: 13px; user-select: none; border: 1px solid transparent; }
+        .autoplay-pill.on { background: #3ea6ff; color: #0f0f0f; }
+        .autoplay-switch { width: 28px; height: 16px; background: #555; border-radius: 16px; position: relative; transition: background 0.2s; }
+        .autoplay-pill.on .autoplay-switch { background: #0f0f0f; }
+        .autoplay-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left 0.2s; }
+        .autoplay-pill.on .autoplay-switch::after { left: 14px; }
+
+        /* === 自動次へカウントダウン === */
+        .next-up-overlay { position: absolute; right: 16px; bottom: 16px; background: rgba(0,0,0,0.85); color: #fff; padding: 12px 14px; border-radius: 10px; z-index: 200; display: none; max-width: 280px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 1px solid #444; }
+        .next-up-overlay.show { display: block; }
+        .next-up-overlay .nu-label { font-size: 11px; color: #aaa; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .next-up-overlay .nu-title { font-size: 13px; font-weight: 500; line-height: 1.3; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .next-up-overlay .nu-actions { display: flex; gap: 6px; }
+        .next-up-overlay button { flex: 1; background: #272727; color: #fff; border: none; padding: 6px 8px; font-size: 12px; border-radius: 6px; cursor: pointer; }
+        .next-up-overlay button.primary { background: #3ea6ff; color: #0f0f0f; font-weight: bold; }
+        .next-up-overlay .nu-progress { height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; margin: 8px 0; overflow: hidden; }
+        .next-up-overlay .nu-progress-bar { height: 100%; background: #3ea6ff; width: 100%; transition: width 0.2s linear; }
     </style>
 </head>
 <body>
@@ -831,6 +888,7 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
             </div>
         </div>
         <h1 class="video-title">${videoData.videoTitle}</h1>
+        <div id="hashtagBar" class="hashtag-bar"></div>
         <div class="owner-row">
             <div class="owner-info">
                 <a href="/channel/${encodeURIComponent(videoData.channelName)}" style="display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;">
@@ -852,7 +910,31 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
                     </div>
                 </div>
             </div>
-            <div style="display:flex; gap:8px;"><button class="action-btn">👍 ${videoData.likeCount || 0}</button><button class="action-btn">共有</button></div>
+            <div class="action-toolbar">
+                <div id="autoplayPill" class="autoplay-pill" onclick="toggleAutoplay()" title="動画終了時に自動で次の動画を再生します">
+                    <span>自動再生</span>
+                    <span class="autoplay-switch"></span>
+                </div>
+                <button class="action-btn" id="theaterBtn" onclick="toggleTheaterMode()" title="シアターモード (T)"><i class="fas fa-tv"></i> シアター</button>
+                <div class="download-menu-wrap">
+                    <button class="action-btn" id="downloadBtn" onclick="toggleDownloadMenu(event)" title="ダウンロード"><i class="fas fa-download"></i> 保存</button>
+                    <div class="download-menu" id="downloadMenu">
+                        <div class="dm-header">ダウンロードリンク</div>
+                        <div id="downloadMenuList"><div class="dm-empty">取得中...</div></div>
+                    </div>
+                </div>
+                <button class="action-btn">👍 ${videoData.likeCount || 0}</button>
+                <button class="action-btn" onclick="shareVideo()"><i class="fas fa-share"></i> 共有</button>
+            </div>
+        </div>
+        <div id="nextUpOverlay" class="next-up-overlay" aria-live="polite">
+            <div class="nu-label">次の動画</div>
+            <div class="nu-title" id="nuTitle"></div>
+            <div class="nu-progress"><div class="nu-progress-bar" id="nuProgressBar"></div></div>
+            <div class="nu-actions">
+                <button id="nuCancelBtn" onclick="cancelAutoNext()">キャンセル</button>
+                <button class="primary" id="nuPlayBtn" onclick="playAutoNextNow()">今すぐ再生</button>
+            </div>
         </div>
         <div class="description-box" id="descriptionBox" onclick="toggleDescription(event)">
             <b>${videoData.videoViews || '0'} 回視聴</b>
@@ -986,12 +1068,18 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
         } catch (error) { console.error(error); } finally { overlay.classList.remove('active'); }
     }
 
+    // 次の動画を保存しておく（自動再生用）
+    window.__nextVideo = null;
     async function loadRecommendations() {
         const params = new URLSearchParams({ title: "${videoData.videoTitle}", channel: "${videoData.channelName}", id: "${videoId}" });
         const res = await fetch(\`/api/recommendations?\${params.toString()}\`);
         const data = await res.json();
         const shorts = data.items.filter(item => item.title.includes('#'));
         const regulars = data.items.filter(item => !item.title.includes('#'));
+        // 「次の動画」として最初の通常動画を保存
+        if (regulars.length > 0) {
+            window.__nextVideo = regulars[0];
+        }
         document.getElementById('recommendations').innerHTML = regulars.map(item => \`
             <a href="/video/\${item.id}" class="rec-item">
                 <div class="rec-thumb"><img src="https://i.ytimg.com/vi/\${item.id}/mqdefault.jpg"></div>
@@ -1093,6 +1181,229 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
         } else {
             box.classList.add('expanded');
             btn.textContent = '一部を表示';
+        }
+    }
+
+    /* ======================================================
+     * 新機能群: シアターモード / 自動再生 / DLリンク / 関連#タグ
+     * ====================================================== */
+
+    // ===== 1. シアターモード =====
+    function applyTheaterMode(on) {
+        document.body.classList.toggle('theater-mode', on);
+        const btn = document.getElementById('theaterBtn');
+        if (btn) {
+            btn.classList.toggle('toggle-on', on);
+            btn.innerHTML = on
+                ? '<i class="fas fa-tv"></i> シアター解除'
+                : '<i class="fas fa-tv"></i> シアター';
+        }
+    }
+    function toggleTheaterMode() {
+        const isOn = !document.body.classList.contains('theater-mode');
+        applyTheaterMode(isOn);
+        try { localStorage.setItem('theaterMode', isOn ? '1' : '0'); } catch(e) {}
+    }
+    // 起動時に状態復元 & Tキーショートカット
+    try {
+        if (localStorage.getItem('theaterMode') === '1') applyTheaterMode(true);
+    } catch(e) {}
+    document.addEventListener('keydown', (e) => {
+        if (e.target && /input|textarea/i.test(e.target.tagName)) return;
+        if (e.key === 't' || e.key === 'T') toggleTheaterMode();
+    });
+
+    // ===== 2. 自動で次の動画 =====
+    let autoplayEnabled = true;
+    try { autoplayEnabled = localStorage.getItem('autoplayNext') !== '0'; } catch(e) {}
+    function updateAutoplayPillUI() {
+        const pill = document.getElementById('autoplayPill');
+        if (!pill) return;
+        pill.classList.toggle('on', autoplayEnabled);
+    }
+    function toggleAutoplay() {
+        autoplayEnabled = !autoplayEnabled;
+        try { localStorage.setItem('autoplayNext', autoplayEnabled ? '1' : '0'); } catch(e) {}
+        updateAutoplayPillUI();
+        if (!autoplayEnabled) cancelAutoNext();
+    }
+    updateAutoplayPillUI();
+
+    let autoNextTimer = null;
+    let autoNextRemaining = 0;
+    function startAutoNext() {
+        if (!autoplayEnabled) return;
+        const next = window.__nextVideo;
+        if (!next || !next.id) return;
+        const overlay = document.getElementById('nextUpOverlay');
+        const titleEl = document.getElementById('nuTitle');
+        const progressBar = document.getElementById('nuProgressBar');
+        if (!overlay || !titleEl) return;
+        titleEl.textContent = next.title || '';
+        overlay.classList.add('show');
+        autoNextRemaining = 7000; // 7秒
+        const startTime = Date.now();
+        const tick = () => {
+            const elapsed = Date.now() - startTime;
+            const remain = Math.max(0, autoNextRemaining - elapsed);
+            const pct = (remain / autoNextRemaining) * 100;
+            if (progressBar) progressBar.style.width = pct + '%';
+            if (remain <= 0) {
+                clearInterval(autoNextTimer);
+                autoNextTimer = null;
+                playAutoNextNow();
+            }
+        };
+        autoNextTimer = setInterval(tick, 100);
+    }
+    function cancelAutoNext() {
+        if (autoNextTimer) { clearInterval(autoNextTimer); autoNextTimer = null; }
+        const overlay = document.getElementById('nextUpOverlay');
+        if (overlay) overlay.classList.remove('show');
+    }
+    function playAutoNextNow() {
+        const next = window.__nextVideo;
+        cancelAutoNext();
+        if (next && next.id) {
+            window.location.href = '/video/' + next.id;
+        }
+    }
+
+    // プレーヤー差し替えのたびに ended イベントを再アタッチする
+    function attachEndedListener() {
+        // <video> 用
+        const vid = document.getElementById('mainPlayer');
+        if (vid && !vid.dataset.endedBound) {
+            vid.dataset.endedBound = '1';
+            vid.addEventListener('ended', () => startAutoNext());
+        }
+        // <iframe>(YouTube IFrame API) は ended の検知が困難なので、
+        // 動画長を取得しておき、推測タイマーは使わず、ユーザーには手動でも次へ進めるようにする
+    }
+    // MutationObserver で playerWrapper を監視
+    (function observePlayer() {
+        const wrap = document.getElementById('playerWrapper');
+        if (!wrap) return;
+        const obs = new MutationObserver(() => attachEndedListener());
+        obs.observe(wrap, { childList: true, subtree: true });
+        attachEndedListener();
+    })();
+
+    // ===== 3. ダウンロードリンク生成 =====
+    function toggleDownloadMenu(e) {
+        if (e) e.stopPropagation();
+        const menu = document.getElementById('downloadMenu');
+        if (!menu) return;
+        const wasOpen = menu.classList.contains('show');
+        menu.classList.toggle('show');
+        if (!wasOpen) loadDownloadLinks();
+    }
+    window.addEventListener('click', (e) => {
+        if (!e.target.closest('.download-menu-wrap')) {
+            const m = document.getElementById('downloadMenu');
+            if (m) m.classList.remove('show');
+        }
+    });
+
+    let __dlLoaded = false;
+    async function loadDownloadLinks() {
+        if (__dlLoaded) return;
+        const list = document.getElementById('downloadMenuList');
+        if (!list) return;
+        const videoId = ${JSON.stringify(videoId)};
+        const title = ${JSON.stringify(videoData.videoTitle || 'video')};
+        const safeName = title.replace(/[\\\\\\/:*?"<>|]/g, '_').slice(0, 80);
+        // ストリームURL (元データ) があれば最優先で提供
+        const directUrl = ${JSON.stringify(videoData.stream_url || '')};
+        const items = [];
+        if (directUrl && directUrl !== 'youtube-nocookie' && /^https?:/.test(directUrl)) {
+            items.push({ url: directUrl, label: '元ストリーム', badge: 'MP4', download: safeName + '.mp4' });
+        }
+        // 360p (内部 /360/ エンドポイント)
+        items.push({ url: '/360/' + videoId, label: '360p (DL-Pro)', badge: 'MP4', download: safeName + '_360p.mp4', resolve: true });
+        // 取得処理（resolve:true は中身URLを取りに行く）
+        list.innerHTML = '';
+        let appended = 0;
+        for (const it of items) {
+            if (it.resolve) {
+                try {
+                    const r = await fetch(it.url);
+                    if (r.ok) {
+                        const realUrl = (await r.text()).trim();
+                        if (realUrl && /^https?:/.test(realUrl)) {
+                            list.appendChild(makeDlAnchor(realUrl, it.label, it.badge, it.download));
+                            appended++;
+                        }
+                    }
+                } catch (e) {}
+            } else {
+                list.appendChild(makeDlAnchor(it.url, it.label, it.badge, it.download));
+                appended++;
+            }
+        }
+        // YouTube公式オフラインリンク（補助）
+        const ytWatch = 'https://www.youtube.com/watch?v=' + videoId;
+        list.appendChild(makeDlAnchor(ytWatch, 'YouTubeで開く', 'LINK', null, true));
+        if (appended === 0) {
+            const note = document.createElement('div');
+            note.className = 'dm-empty';
+            note.textContent = '直接ダウンロード可能なソースが見つかりませんでした。';
+            list.prepend(note);
+        }
+        __dlLoaded = true;
+    }
+    function makeDlAnchor(url, label, badge, downloadName, isExternal) {
+        const a = document.createElement('a');
+        a.href = url;
+        if (downloadName) a.setAttribute('download', downloadName);
+        if (isExternal) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+        a.innerHTML = '<span>' + label + '</span><span class="dm-badge">' + (badge || '') + '</span>';
+        return a;
+    }
+
+    // ===== 4. 関連ハッシュタグ =====
+    (function buildHashtags() {
+        const bar = document.getElementById('hashtagBar');
+        if (!bar) return;
+        const title = ${JSON.stringify(videoData.videoTitle || '')};
+        const desc  = ${JSON.stringify(videoData.videoDes || '')};
+        const text = title + ' ' + desc;
+        // 全角/半角 # を許容し、日本語/英数字/_/- を1〜30文字
+        const re = /[#＃]([\\p{L}\\p{N}_\\-]{1,30})/gu;
+        const found = [];
+        const seen = new Set();
+        let m;
+        while ((m = re.exec(text)) !== null) {
+            const tag = m[1].trim();
+            if (!tag) continue;
+            const key = tag.toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            found.push(tag);
+            if (found.length >= 10) break;
+        }
+        if (found.length === 0) { bar.style.display = 'none'; return; }
+        bar.innerHTML = found.map(t =>
+            '<a class="hashtag-chip" href="/nothing/search?q=' + encodeURIComponent('#' + t) + '">#' + t + '</a>'
+        ).join('');
+    })();
+
+    // ===== 5. 共有ボタン =====
+    function shareVideo() {
+        const url = location.href;
+        const title = ${JSON.stringify(videoData.videoTitle || '')};
+        if (navigator.share) {
+            navigator.share({ title, url }).catch(() => {});
+        } else if (navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(() => {
+                const t = document.createElement('div');
+                t.textContent = 'リンクをコピーしました';
+                t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#272727;color:#fff;padding:10px 18px;border-radius:24px;z-index:9999;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
+                document.body.appendChild(t);
+                setTimeout(() => t.remove(), 1800);
+            });
+        } else {
+            prompt('動画URL:', url);
         }
     }
 </script>
