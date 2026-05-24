@@ -2321,10 +2321,6 @@ app.get("/movie", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "app/sorry.html"));
 });
 
-app.get("/check", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "app/check.html"));
-});
-
 app.get("/use-api", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "app/api-portal.html"));
 });
@@ -2373,10 +2369,6 @@ app.get("/wista", (req, res) => {
 
 app.get("/sia", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "sia/index.html"));
-});
-
-app.get("/k-tube", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "app/iframe/k-tube.html"));
 });
 
 app.get("/science", (req, res) => {
@@ -3026,13 +3018,6 @@ app.get("/img/:videoId", (req, res) => {
         res.status(500).send("Proxy error");
     });
 });
-
-app.get("/abyss.png", (req, res) => {
-  const filePath = path.join(__dirname, "img", "abyss.png");
-  res.sendFile(filePath);
-});
-
-
 
 app.get('/get-other/:videoId', async (req, res) => {
     const { videoId } = req.params;
