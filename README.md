@@ -26,6 +26,14 @@ Min-Tube-Proの独自派生です
 ---
 
 ## 更新履歴
+### ver1.3.0
+- 🔔 通知ベルボタンを追加 — 登録チャンネルの新着動画をリアルタイム通知
+- 登録チャンネル新着動画通知 API `/api/channel-latest` を追加
+- すべての「MIN-Tube-Pro」表記を「MIN-Tube-Slim」に変更
+- 再生方法から STUDY2525 (DL-Pro) と K-tube を削除
+- 読み込み高速化: 静的ファイルへの Cache-Control ヘッダー最適化
+- Service Worker のキャッシュ戦略を改善
+
 ### ver1.2.0
 - 動画一覧ページにチャンネルの画像が表示されずに簡易表示されてしまうバグを修正
 - MinTube での偽装ページ / ローディング表示 (humanVerified 確認画面) を削除
