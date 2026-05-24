@@ -30,7 +30,11 @@ const keys = [
   process.env.RAPIDAPI_KEY_3 || '41c9265bc6msha0fa7dfc1a63eabp18bf7cjsne6ef10b79b38'
 ];
 
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public"), {
+  maxAge: '1h',
+  etag: true,
+  lastModified: true
+}));
 app.use(cookieParser());
 
 let apiListCache = [];
@@ -590,8 +594,8 @@ const shortsHtml = `
                     targetIframe.style.visibility = 'visible';
 
                 } else if (savedMode !== 'googlevideo' && videoEl) {
-                    // DL-Pro などその他のモード: エンドポイントからURLを取得して再生
-                    const endpointMap = { 'DL-Pro': '/360/${videoId}' };
+                    // その他のモード: エンドポイントからURLを取得して再生
+                    const endpointMap = {};
                     const endpoint = endpointMap[savedMode];
                     if (endpoint) {
                         try {
@@ -803,7 +807,6 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
                     <div id="serverMenu" class="server-menu">
                         <div class="server-option active" onclick="changeServer('googlevideo', '', event)">Googlevideo</div>
                         <div class="server-option" onclick="changeServer('youtube-nocookie', '/nocookie/${videoId}', event)">Youtube-nocookie</div>
-                        <div class="server-option" onclick="changeServer('DL-Pro', '/360/${videoId}', event)">DL-Pro</div>
                         <div class="server-option" onclick="changeServer('YoutubeEdu-Kahoot', '/kahoot-edu/${videoId}', event)">YoutubeEdu-Kahoot</div>
                         <div class="server-option" onclick="changeServer('YoutubeEdu-Scratch', '/scratch-edu/${videoId}', event)">YoutubeEdu-Scratch</div>
                         <div class="server-option" onclick="changeServer('Youtube-Pro', '/pro-stream/${videoId}', event)">Youtube-Pro</div>
@@ -983,7 +986,6 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
         const serverEndpoints = {
             'googlevideo':        '',
             'youtube-nocookie':   '/nocookie/${videoId}',
-            'DL-Pro':             '/360/${videoId}',
             'YoutubeEdu-Kahoot':  '/kahoot-edu/${videoId}',
             'YoutubeEdu-Scratch': '/scratch-edu/${videoId}',
             'Youtube-Pro':        '/pro-stream/${videoId}'
@@ -1593,7 +1595,7 @@ app.get('/ai-fetch/:videoId', async (req, res) => {
 });
 
 app.get("/youtube-pro", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "min-tube-pro.html"));
+  res.sendFile(path.join(__dirname, "public", "min-tube-slim.html"));
 });
 
 app.get("/min-img.png", (req, res) => {
@@ -1625,9 +1627,7 @@ app.get("/ai", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "app/aibot.html"));
 });
 
-app.get("/dl-pro", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "app/study2525.html"));
-});
+// /dl-pro route removed in v1.3.0
 
 app.get("/update", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "app/sorry.html"));
@@ -1958,9 +1958,7 @@ app.get("/sia", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "sia/index.html"));
 });
 
-app.get("/k-tube", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "app/iframe/k-tube.html"));
-});
+// /k-tube route removed in v1.3.0
 
 app.get("/science", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "app/iframe/science.html"));
@@ -2043,7 +2041,7 @@ app.get("/channel/:channelName", (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${channelName} - MIN-Tube-Pro</title>
+  <title>${channelName} - MIN-Tube-Slim</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <style>
@@ -2649,7 +2647,7 @@ const calculateScore = (v) => {
 };
 
 app.get('/check-version', async (req, res) => {
-    const remoteUrl = 'https://raw.githubusercontent.com/mino-hobby-pro/MIN-Tube-Pro/refs/heads/main/public/raw/version.json';
+    const remoteUrl = 'https://raw.githubusercontent.com/Sou930/MIN-Tube-Slim/refs/heads/main/public/raw/version.json';
     const localPath = path.join(__dirname, 'public', 'raw', 'version.json');
 
     try {
@@ -2753,6 +2751,51 @@ app.get("/short-check/:id", async (req, res) => {
   }
 });
 
+
+
+// ===== v1.3.0: 登録チャンネル新着動画通知 API =====
+// GET /api/channel-latest?name=<channelName>
+// 指定チャンネルの最新動画1件を返す（キャッシュ: 3分）
+const channelLatestCache = new Map(); // key: channelName → { id, title, expiry }
+const NOTIF_CACHE_TTL = 3 * 60 * 1000; // 3分
+
+app.get('/api/channel-latest', async (req, res) => {
+  const channelName = (req.query.name || '').trim();
+  if (!channelName) return res.status(400).json({ error: 'name required' });
+
+  // キャッシュ確認
+  const cached = channelLatestCache.get(channelName);
+  if (cached && Date.now() < cached.expiry) {
+    res.setHeader('Cache-Control', 'public, max-age=180');
+    return res.json(cached.data);
+  }
+
+  try {
+    const results = await yts.GetListByKeyword(channelName, false, 5);
+    const videos = (results.items || []).filter(item => item.type === 'video');
+    if (videos.length === 0) return res.json({ id: null, title: null });
+
+    const latest = videos[0];
+    const data = {
+      id: latest.id,
+      title: latest.title || '',
+      channelTitle: latest.channelTitle || channelName
+    };
+
+    // キャッシュ保存
+    channelLatestCache.set(channelName, { data, expiry: Date.now() + NOTIF_CACHE_TTL });
+    // キャッシュサイズ制限
+    if (channelLatestCache.size > 100) {
+      const oldestKey = channelLatestCache.keys().next().value;
+      channelLatestCache.delete(oldestKey);
+    }
+
+    res.setHeader('Cache-Control', 'public, max-age=180');
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.use((req, res) => res.status(404).sendFile(path.join(__dirname, "public", "error.html")));
 app.use((err, req, res, next) => {
