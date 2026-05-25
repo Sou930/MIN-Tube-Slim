@@ -27,272 +27,504 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="dns-prefetch" href="https://fonts.googleapis.com">
 <link rel="dns-prefetch" href="https://fonts.gstatic.com">
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
 
 <style>
   :root {
-    --bg-dark: #020612;
-    --bg-gradient: radial-gradient(circle at 50% 0%, #0a132a 0%, #020612 100%);
+    --bg-base: #05070f;
+    --bg-elev-1: rgba(255, 255, 255, 0.04);
+    --bg-elev-2: rgba(255, 255, 255, 0.06);
     --accent: #00d4ff;
-    --accent-glow: rgba(0, 212, 255, 0.4);
-    --accent2: #7b61ff;
-    --accent3: #ff6fd8;
-    --text: #e2e8f0;
-    --text-dim: #94a3b8;
-    --card-bg: rgba(15, 23, 42, 0.6);
+    --accent-2: #7b61ff;
+    --accent-3: #ff6fd8;
+    --accent-glow: rgba(0, 212, 255, 0.35);
+    --text: #e6eaf2;
+    --text-dim: #8b94a8;
+    --text-faint: #5b6378;
     --card-border: rgba(255, 255, 255, 0.08);
-    --glass-blur: 18px;
-    --radius-lg: 24px;
-    --radius-md: 16px;
-    --transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-    --green: #10b981;
-    --red: #f43f5e;
+    --card-border-hover: rgba(0, 212, 255, 0.4);
+    --radius-xl: 28px;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 8px;
+    --transition: 320ms cubic-bezier(0.22, 1, 0.36, 1);
+    --ok: #22c55e;
+    --wip: #f43f5e;
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
 
   body {
-    background: var(--bg-dark);
-    background-image: var(--bg-gradient);
+    background: var(--bg-base);
     color: var(--text);
-    font-family: 'Syne', 'Noto Sans JP', sans-serif;
-    line-height: 1.6;
-    overflow-x: hidden;
+    font-family: 'Space Grotesk', 'Noto Sans JP', system-ui, sans-serif;
+    line-height: 1.55;
     min-height: 100vh;
+    overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
-  /* ── Background Mesh ── */
+  /* ── Mesh Background ── */
   .mesh-bg {
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    z-index: -1;
+    inset: 0;
+    z-index: -2;
     overflow: hidden;
     pointer-events: none;
-  }
-  .orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.15;
-    animation: float 20s infinite alternate;
-  }
-  .orb-1 { width: 400px; height: 400px; background: var(--accent); top: -100px; left: -100px; }
-  .orb-2 { width: 300px; height: 300px; background: var(--accent2); bottom: 10%; right: -50px; animation-delay: -5s; }
-  
-  @keyframes float {
-    0% { transform: translate(0, 0); }
-    100% { transform: translate(40px, 60px); }
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(123, 97, 255, 0.18), transparent 60%),
+      radial-gradient(900px 500px at 0% 10%, rgba(0, 212, 255, 0.14), transparent 60%),
+      radial-gradient(700px 700px at 50% 110%, rgba(255, 111, 216, 0.10), transparent 60%);
   }
 
+  .grid-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse at center, #000 35%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse at center, #000 35%, transparent 80%);
+  }
+
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.45;
+    z-index: -1;
+    pointer-events: none;
+    will-change: transform;
+    animation: drift 24s ease-in-out infinite alternate;
+  }
+  .orb-1 { width: 380px; height: 380px; background: var(--accent); top: -120px; left: -80px; }
+  .orb-2 { width: 320px; height: 320px; background: var(--accent-2); bottom: 5%; right: -60px; animation-delay: -8s; }
+  .orb-3 { width: 240px; height: 240px; background: var(--accent-3); top: 40%; left: 40%; animation-delay: -14s; opacity: 0.22; }
+
+  @keyframes drift {
+    0%   { transform: translate(0, 0) scale(1); }
+    50%  { transform: translate(40px, 30px) scale(1.05); }
+    100% { transform: translate(-30px, 50px) scale(0.95); }
+  }
+
+  /* ── Layout ── */
   .wrap {
-    max-width: 1200px;
+    max-width: 1240px;
     margin: 0 auto;
-    padding: calc(40px + env(safe-area-inset-top)) 24px calc(60px + env(safe-area-inset-bottom));
+    padding: calc(48px + env(safe-area-inset-top)) 24px calc(80px + env(safe-area-inset-bottom));
+  }
+
+  /* ── Top Nav (compact) ── */
+  .topnav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding: 10px 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .brand-mini {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.3px;
+  }
+  .brand-mini img { width: 26px; height: 26px; border-radius: 8px; }
+  .nav-meta {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 12px; color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .nav-meta .pill {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(34,197,94,0.12);
+    color: #4ade80;
+    border: 1px solid rgba(34,197,94,0.25);
+    font-weight: 600;
+    font-size: 11px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .nav-meta .pill::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 8px #4ade80;
   }
 
   /* ── Hero ── */
   header.hero {
-    display: flex;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--card-border);
-    border-radius: var(--radius-lg);
-    padding: 32px;
-    margin-bottom: 48px;
     position: relative;
+    border-radius: var(--radius-xl);
+    padding: 48px 44px;
+    margin-bottom: 56px;
     overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    background:
+      linear-gradient(135deg, rgba(0,212,255,0.08), rgba(123,97,255,0.06) 50%, rgba(255,111,216,0.05)),
+      rgba(255,255,255,0.025);
+    border: 1px solid var(--card-border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
   }
-
   header.hero::before {
     content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(600px 300px at 100% 0%, rgba(123,97,255,0.25), transparent 60%),
+      radial-gradient(500px 280px at 0% 100%, rgba(0,212,255,0.18), transparent 60%);
+    pointer-events: none;
+  }
+  header.hero::after {
+    content: '';
     position: absolute;
-    top: 0; left: 0; width: 4px; height: 100%;
-    background: linear-gradient(to bottom, var(--accent), var(--accent2));
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), var(--accent-3), transparent);
+    opacity: 0.7;
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 32px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
   }
 
   .logo-area {
-    margin-right: 28px;
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .logo-ring {
+    position: absolute;
+    inset: -10px;
+    border-radius: 28px;
+    background: conic-gradient(from 0deg, var(--accent), var(--accent-2), var(--accent-3), var(--accent));
+    filter: blur(14px);
+    opacity: 0.55;
+    animation: spin 8s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .logo-img {
+    position: relative;
+    width: 92px; height: 92px;
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: #0b1226;
+    z-index: 1;
   }
 
-  .logo-img {
-    width: 80px; height: 80px;
-    border-radius: 20px;
-    box-shadow: 0 0 25px var(--accent-glow);
-    border: 2px solid rgba(255,255,255,0.1);
+  .hero-content {
+    min-width: 0;
+  }
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.25);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .hero-tag::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: blink 1.6s ease-in-out infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
   }
 
   .hero-content h1 {
-    font-size: 28px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    background: linear-gradient(to right, #fff, #a5b4fc);
+    font-size: clamp(34px, 5vw, 52px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -1.2px;
+    background: linear-gradient(135deg, #ffffff 20%, #a5b4fc 60%, #00d4ff 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    margin-bottom: 12px;
+  }
+  .hero-content h1 .accent {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 700;
   }
 
   .typewriter-container {
-    height: 24px;
+    min-height: 26px;
     display: flex;
     align-items: center;
-    margin-top: 6px;
+  }
+  .typewriter {
+    font-size: 15px;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+  .typewriter .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--accent);
+    margin-left: 3px;
+    vertical-align: text-bottom;
+    animation: cursor-blink 1s steps(2) infinite;
+  }
+  @keyframes cursor-blink {
+    50% { opacity: 0; }
   }
 
-  .typewriter {
-    font-size: 14px;
-    color: var(--accent);
+  /* Hero stats */
+  .hero-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: right;
+  }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--card-border);
+    min-width: 110px;
+  }
+  .stat-num {
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(135deg, #fff, var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-faint);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-top: 4px;
+    font-weight: 600;
+  }
+
+  /* ── Toolbar / Section Label ── */
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 0 4px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    color: var(--text-faint);
+  }
+  .status-legend {
+    display: flex;
+    gap: 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+  }
+  .dot.done { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .dot.wip  { background: var(--wip); box-shadow: 0 0 8px var(--wip); }
+
+  /* ── Categories ── */
+  .category-section {
+    margin-bottom: 44px;
+  }
+  .category-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .cat-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: 19px;
+  }
+  .cat-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.3px;
+  }
+  .cat-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.12), transparent);
+  }
+  .cat-count {
+    font-size: 11px;
+    padding: 4px 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    color: var(--text-dim);
     font-weight: 600;
     letter-spacing: 0.5px;
   }
 
-  /* ── Legend & Filter ── */
-  .toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 24px;
-    padding: 0 8px;
-  }
-
-  .section-label {
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: var(--text-dim);
-  }
-
-  .status-legend {
-    display: flex;
-    gap: 16px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-  .legend-item { display: flex; align-items: center; gap: 6px; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; }
-  .dot.done { background: var(--green); box-shadow: 0 0 8px var(--green); }
-  .dot.wip { background: var(--red); box-shadow: 0 0 8px var(--red); }
-
-  /* ── Category Section ── */
-  .category-section {
-    margin-bottom: 40px;
-  }
-
-  .category-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-
-  .cat-icon {
-    width: 36px; height: 36px;
-    background: rgba(255,255,255,0.05);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-  }
-
-  .cat-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #fff;
-  }
-
-  .cat-line {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.1), transparent);
-  }
-
-  .cat-count {
-    font-size: 12px;
-    padding: 2px 10px;
-    background: rgba(255,255,255,0.05);
-    border-radius: 20px;
-    color: var(--text-dim);
-  }
-
-  /* ── Modern Grid Layout ── */
+  /* ── Grid ── */
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 18px;
   }
 
-  /* ── Card Design ── */
+  /* ── Card ── */
   .card {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    border-radius: var(--radius-md);
-    padding: 24px;
     position: relative;
-    transition: var(--transition);
-    cursor: pointer;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
     overflow: hidden;
+    cursor: pointer;
+    transition: transform var(--transition),
+                border-color var(--transition),
+                box-shadow var(--transition),
+                background var(--transition);
     display: flex;
     flex-direction: column;
     gap: 16px;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    isolation: isolate;
   }
-
+  /* gradient border highlight on hover */
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(0,212,255,0.5), rgba(123,97,255,0.4), rgba(255,111,216,0.3));
+    -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+            mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    opacity: 0;
+    transition: opacity var(--transition);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .card::after {
+    /* subtle radial glow follow */
+    content: '';
+    position: absolute;
+    width: 280px; height: 280px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,212,255,0.18), transparent 60%);
+    top: var(--my, 50%); left: var(--mx, 50%);
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity var(--transition);
+    pointer-events: none;
+    z-index: 0;
+  }
   .card:hover {
-    transform: translateY(-8px) scale(1.01);
-    background: rgba(30, 41, 59, 0.7);
-    border-color: rgba(0, 212, 255, 0.3);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 212, 255, 0.1);
+    transform: translateY(-6px);
+    border-color: var(--card-border-hover);
+    box-shadow:
+      0 20px 50px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(0, 212, 255, 0.08);
   }
+  .card:hover::before { opacity: 1; }
+  .card:hover::after  { opacity: 1; }
+  .card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .card:active { transform: translateY(-3px) scale(0.99); }
+  .card > * { position: relative; z-index: 2; }
 
   .card-top {
     display: flex;
-    gap: 16px;
+    gap: 14px;
     align-items: flex-start;
   }
 
   .app-icon {
-    width: 56px; height: 56px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
+    width: 54px; height: 54px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02));
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: grid;
+    place-items: center;
     font-size: 26px;
     flex-shrink: 0;
-    transition: var(--transition);
+    transition: transform var(--transition), border-color var(--transition);
   }
-
   .card:hover .app-icon {
-    transform: rotate(-5deg) scale(1.1);
-    border-color: var(--accent);
+    transform: rotate(-4deg) scale(1.06);
+    border-color: rgba(0, 212, 255, 0.5);
   }
 
-  .app-info {
-    flex: 1;
-  }
+  .app-info { flex: 1; min-width: 0; }
 
   .app-name {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 700;
     color: #fff;
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
+    letter-spacing: -0.2px;
   }
 
   .app-desc {
     font-size: 13px;
     color: var(--text-dim);
-    line-height: 1.5;
+    line-height: 1.55;
   }
 
   .card-footer {
@@ -300,110 +532,194 @@
     justify-content: space-between;
     align-items: center;
     margin-top: auto;
-    padding-top: 16px;
-    border-top: 1px solid rgba(255,255,255,0.05);
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    gap: 10px;
   }
 
   .app-path {
-    font-family: 'Syne', monospace;
+    font-family: 'Space Grotesk', ui-monospace, monospace;
     font-size: 11px;
     background: rgba(0, 212, 255, 0.1);
     color: var(--accent);
     padding: 4px 10px;
     border-radius: 6px;
     font-weight: 600;
+    letter-spacing: 0.2px;
+    border: 1px solid rgba(0, 212, 255, 0.15);
   }
 
   .app-badge {
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.2px;
     color: var(--text-dim);
-    padding: 3px 8px;
+    padding: 3px 9px;
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 4px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.02);
   }
 
-  /* ── Pulse Animation ── */
+  /* Status dot (pulse) */
   .status-indicator {
     width: 8px; height: 8px;
     border-radius: 50%;
     position: relative;
+    flex-shrink: 0;
   }
-  .status-indicator.done { background: var(--green); }
-  .status-indicator.wip { background: var(--red); }
+  .status-indicator.done { background: var(--ok); }
+  .status-indicator.wip  { background: var(--wip); }
   .status-indicator.done::after {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    background: var(--green);
-    animation: pulse 2s infinite;
+    background: var(--ok);
+    animation: pulse 2.2s ease-out infinite;
   }
   @keyframes pulse {
-    0% { transform: scale(1); opacity: 0.8; }
+    0%   { transform: scale(1); opacity: 0.75; }
     100% { transform: scale(3); opacity: 0; }
   }
 
+  /* ── Footer ── */
+  .page-footer {
+    margin-top: 56px;
+    padding: 28px 0;
+    text-align: center;
+    border-top: 1px solid var(--card-border);
+    color: var(--text-faint);
+    font-size: 12px;
+    letter-spacing: 0.4px;
+  }
+  .page-footer .footer-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+  .page-footer .footer-brand .dotline {
+    color: var(--accent);
+  }
+
+  /* ── Entrance Animations ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    animation: reveal 0.7s var(--transition) forwards;
+  }
+  .reveal:nth-child(1) { animation-delay: 0.02s; }
+  .reveal:nth-child(2) { animation-delay: 0.08s; }
+  .reveal:nth-child(3) { animation-delay: 0.14s; }
+  .reveal:nth-child(4) { animation-delay: 0.20s; }
+  .reveal:nth-child(5) { animation-delay: 0.26s; }
+  .reveal:nth-child(6) { animation-delay: 0.32s; }
+  @keyframes reveal {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   /* ── Responsive ── */
-  @media (max-width: 768px) {
-    header.hero {
-      flex-direction: column;
-      text-align: center;
-      padding: 32px 20px;
-    }
-    header.hero::before {
-      width: 100%; height: 4px;
-      background: linear-gradient(to right, var(--accent), var(--accent2));
-    }
-    .logo-area { margin-right: 0; margin-bottom: 16px; }
-    .grid {
+  @media (max-width: 860px) {
+    .hero-grid {
       grid-template-columns: 1fr;
-      gap: 16px;
+      gap: 24px;
+      text-align: center;
     }
-    .toolbar {
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
+    .logo-area { justify-self: center; }
+    .hero-stats {
+      flex-direction: row;
+      justify-content: center;
+      flex-wrap: wrap;
+      text-align: center;
     }
+    .stat { align-items: center; min-width: 100px; }
+    header.hero { padding: 36px 24px; }
+  }
+  @media (max-width: 560px) {
+    .wrap { padding: 24px 16px 60px; }
+    .grid { grid-template-columns: 1fr; gap: 14px; }
+    .topnav { padding: 8px 12px; }
+    .brand-mini { font-size: 13px; }
+    .nav-meta .pill { display: none; }
+    header.hero { padding: 28px 20px; border-radius: var(--radius-lg); }
+    .hero-content h1 { font-size: 30px; }
+    .stat-num { font-size: 18px; }
+    .toolbar { flex-direction: column; align-items: flex-start; gap: 10px; }
   }
 
-  /* Scrollbar Customization */
-  ::-webkit-scrollbar { width: 8px; }
-  ::-webkit-scrollbar-track { background: var(--bg-dark); }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.08);
     border-radius: 10px;
+    border: 2px solid var(--bg-base);
   }
-  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.4); }
 
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
 </style>
 </head>
 <body>
 
-  <div class="mesh-bg">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-  </div>
+  <div class="mesh-bg" aria-hidden="true"></div>
+  <div class="grid-overlay" aria-hidden="true"></div>
+  <div class="orb orb-1" aria-hidden="true"></div>
+  <div class="orb orb-2" aria-hidden="true"></div>
+  <div class="orb orb-3" aria-hidden="true"></div>
 
   <div class="wrap" role="main">
 
-    <!-- Hero Section -->
-    <header class="hero">
-      <div class="logo-area">
-        <img src="/min-img.png" alt="Logo" class="logo-img">
+    <!-- Top Nav -->
+    <nav class="topnav reveal" aria-label="Global">
+      <div class="brand-mini">
+        <img src="/min-img.png" alt="" />
+        <span>MIN-Tube-Slim</span>
       </div>
-      <div class="hero-content">
-        <h1>MIN‑Tube‑Pro</h1>
-        <div class="typewriter-container">
-          <div id="typewriter" class="typewriter"></div>
+      <div class="nav-meta">
+        <span class="pill" id="statusPill">All Systems Operational</span>
+        <span id="clock" aria-live="polite">--:--</span>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero reveal" role="banner">
+      <div class="hero-grid">
+        <div class="logo-area">
+          <span class="logo-ring" aria-hidden="true"></span>
+          <img src="/min-img.png" alt="MIN-Tube-Slim Logo" class="logo-img" />
+        </div>
+        <div class="hero-content">
+          <span class="hero-tag">Next-Gen Launcher · v1.3.1</span>
+          <h1>MIN-Tube-<span class="accent">Slim</span></h1>
+          <div class="typewriter-container">
+            <span id="typewriter" class="typewriter"></span><span class="cursor" aria-hidden="true"></span>
+          </div>
+        </div>
+        <div class="hero-stats" aria-label="Statistics">
+          <div class="stat">
+            <span class="stat-num" id="statApps">7</span>
+            <span class="stat-label">Apps</span>
+          </div>
+          <div class="stat">
+            <span class="stat-num">100%</span>
+            <span class="stat-label">Uptime</span>
+          </div>
         </div>
       </div>
     </header>
 
     <!-- Toolbar -->
-    <div class="toolbar">
+    <div class="toolbar reveal">
       <div class="section-label">Exploration Hub</div>
       <div class="status-legend">
         <div class="legend-item"><span class="dot done"></span> 実装済み</div>
@@ -412,20 +728,20 @@
     </div>
 
     <!-- ── Category: Videos ── -->
-    <section class="category-section">
+    <section class="category-section reveal" aria-labelledby="cat-video">
       <div class="category-header">
-        <div class="cat-icon">🎬</div>
-        <h2 class="cat-title">Video Streaming</h2>
-        <div class="cat-line"></div>
+        <div class="cat-icon" aria-hidden="true">🎬</div>
+        <h2 class="cat-title" id="cat-video">Video Streaming</h2>
+        <div class="cat-line" aria-hidden="true"></div>
         <div class="cat-count">2 Apps</div>
       </div>
       <div class="grid">
-        <article class="card" data-endpoint="/">
+        <article class="card" data-endpoint="/" tabindex="0" role="link" aria-label="Youtube-Slim を開く">
           <div class="card-top">
-            <div class="app-icon">▶️</div>
+            <div class="app-icon" aria-hidden="true">▶️</div>
             <div class="app-info">
-              <div class="app-name"><span class="status-indicator done"></span> Youtube‑Pro</div>
-              <p class="app-desc">MIN-Tube2の進化系。改善されたUIとサーバー処理で、最高級の視聴体験を提供します。</p>
+              <div class="app-name"><span class="status-indicator done" aria-hidden="true"></span> Youtube‑Slim</div>
+              <p class="app-desc">MIN-Tube の進化系。洗練された UI と高速サーバー処理で、最高級の視聴体験を提供します。</p>
             </div>
           </div>
           <div class="card-footer">
@@ -434,12 +750,12 @@
           </div>
         </article>
 
-        <article class="card" data-endpoint="/dl-pro">
+        <article class="card" data-endpoint="/dl-pro" tabindex="0" role="link" aria-label="STUDY2525 を開く">
           <div class="card-top">
-            <div class="app-icon">⚡</div>
+            <div class="app-icon" aria-hidden="true">⚡</div>
             <div class="app-info">
-              <div class="app-name"><span class="status-indicator done"></span> STUDY2525</div>
-              <p class="app-desc">平均0.02秒の超高速ロード。究極のYoutube代替インスタンスをHTML1枚で実現。</p>
+              <div class="app-name"><span class="status-indicator done" aria-hidden="true"></span> STUDY2525</div>
+              <p class="app-desc">平均 0.02 秒の超高速ロード。究極の YouTube 代替インスタンスを HTML 1 枚で実現。</p>
             </div>
           </div>
           <div class="card-footer">
@@ -447,24 +763,23 @@
             <span class="app-badge">Ultra-Fast</span>
           </div>
         </article>
-
       </div>
     </section>
 
-    <!-- ── Category: Entertainment (Anime + Games 統合) ── -->
-    <section class="category-section">
+    <!-- ── Category: Entertainment ── -->
+    <section class="category-section reveal" aria-labelledby="cat-ent">
       <div class="category-header">
-        <div class="cat-icon">🎮</div>
-        <h2 class="cat-title">Entertainment Hub</h2>
-        <div class="cat-line"></div>
+        <div class="cat-icon" aria-hidden="true">🎮</div>
+        <h2 class="cat-title" id="cat-ent">Entertainment Hub</h2>
+        <div class="cat-line" aria-hidden="true"></div>
         <div class="cat-count">2 Apps</div>
       </div>
       <div class="grid">
-        <article class="card" data-endpoint="/anime">
+        <article class="card" data-endpoint="/anime" tabindex="0" role="link" aria-label="ANIME Viewer を開く">
           <div class="card-top">
-            <div class="app-icon">✨</div>
+            <div class="app-icon" aria-hidden="true">✨</div>
             <div class="app-info">
-              <div class="app-name"><span class="status-indicator done"></span> ANIME Viewer</div>
+              <div class="app-name"><span class="status-indicator done" aria-hidden="true"></span> ANIME Viewer</div>
               <p class="app-desc">膨大なアニメライブラリにアクセス。あなたの好きな作品がここに見つかります。</p>
             </div>
           </div>
@@ -474,11 +789,11 @@
           </div>
         </article>
 
-        <article class="card" data-endpoint="/game/game.html">
+        <article class="card" data-endpoint="/game/game.html" tabindex="0" role="link" aria-label="Games を開く">
           <div class="card-top">
-            <div class="app-icon">🕹️</div>
+            <div class="app-icon" aria-hidden="true">🕹️</div>
             <div class="app-info">
-              <div class="app-name"><span class="status-indicator done"></span> Games</div>
+              <div class="app-name"><span class="status-indicator done" aria-hidden="true"></span> Games</div>
               <p class="app-desc">厳選されたブラウザゲーム集。ちょっとした休憩時間に、最高に気軽な遊びを。</p>
             </div>
           </div>
@@ -491,20 +806,20 @@
     </section>
 
     <!-- ── Category: Proxy ── -->
-    <section class="category-section">
+    <section class="category-section reveal" aria-labelledby="cat-proxy">
       <div class="category-header">
-        <div class="cat-icon">🔓</div>
-        <h2 class="cat-title">Proxy Network</h2>
-        <div class="cat-line"></div>
+        <div class="cat-icon" aria-hidden="true">🔓</div>
+        <h2 class="cat-title" id="cat-proxy">Proxy Network</h2>
+        <div class="cat-line" aria-hidden="true"></div>
         <div class="cat-count">2 Apps</div>
       </div>
       <div class="grid">
-        <article class="card" data-endpoint="/helios">
+        <article class="card" data-endpoint="/helios" tabindex="0" role="link" aria-label="Helios を開く">
           <div class="card-top">
-            <div class="app-icon">☀️</div>
+            <div class="app-icon" aria-hidden="true">☀️</div>
             <div class="app-info">
-              <div class="app-name"><span class="status-indicator done"></span> Helios</div>
-              <p class="app-desc">マルチタブ対応プロキシ。NautilusOSとの完全互換性を持ち、並行ブラウジングに最適。</p>
+              <div class="app-name"><span class="status-indicator done" aria-hidden="true"></span> Helios</div>
+              <p class="app-desc">マルチタブ対応プロキシ。NautilusOS との完全互換性を持ち、並行ブラウジングに最適。</p>
             </div>
           </div>
           <div class="card-footer">
@@ -513,11 +828,11 @@
           </div>
         </article>
 
-        <article class="card" data-endpoint="/gust">
+        <article class="card" data-endpoint="/gust" tabindex="0" role="link" aria-label="Gust を開く">
           <div class="card-top">
-            <div class="app-icon">🌪️</div>
+            <div class="app-icon" aria-hidden="true">🌪️</div>
             <div class="app-info">
-              <div class="app-name"><span class="status-indicator done"></span> Gust</div>
+              <div class="app-name"><span class="status-indicator done" aria-hidden="true"></span> Gust</div>
               <p class="app-desc">超軽量プロキシ。フィルターを突風のようにすり抜け、快適な速度を維持します。</p>
             </div>
           </div>
@@ -526,24 +841,23 @@
             <span class="app-badge">Lightweight</span>
           </div>
         </article>
-
       </div>
     </section>
 
     <!-- ── Category: Tools ── -->
-    <section class="category-section">
+    <section class="category-section reveal" aria-labelledby="cat-tools">
       <div class="category-header">
-        <div class="cat-icon">🛠️</div>
-        <h2 class="cat-title">Utility & Tools</h2>
-        <div class="cat-line"></div>
+        <div class="cat-icon" aria-hidden="true">🛠️</div>
+        <h2 class="cat-title" id="cat-tools">Utility &amp; Tools</h2>
+        <div class="cat-line" aria-hidden="true"></div>
         <div class="cat-count">1 App</div>
       </div>
       <div class="grid">
-        <article class="card" data-endpoint="/api-portal">
+        <article class="card" data-endpoint="/api-portal" tabindex="0" role="link" aria-label="API Portal を開く">
           <div class="card-top">
-            <div class="app-icon">🔌</div>
+            <div class="app-icon" aria-hidden="true">🔌</div>
             <div class="app-info">
-              <div class="app-name"><span class="status-indicator done"></span> API Portal</div>
+              <div class="app-name"><span class="status-indicator done" aria-hidden="true"></span> API Portal</div>
               <p class="app-desc">MIN-Tube-Slim の全 API を一覧・検索・ライブテストできる公式ポータル。認証不要ですぐ利用可能。</p>
             </div>
           </div>
@@ -555,58 +869,77 @@
       </div>
     </section>
 
-    <footer style="text-align: center; margin-top: 40px; color: var(--text-dim); font-size: 13px;">
-      <p>&copy; 2026 MIN-Tube-Slim Project. Select an application to launch.</p>
+    <footer class="page-footer">
+      <span class="footer-brand">
+        <span class="dotline">●</span> 2026 MIN-Tube-Slim Project
+      </span>
+      <span style="margin: 0 8px; color: var(--text-faint);">·</span>
+      <span>Select an application to launch.</span>
     </footer>
 
   </div>
 
   <script>
-    // ── Optimized Typewriter ──
-    const phrases = [
-      "Welcome to the Next Generation. ✨",
-      "動画を、もっと快適に、自由に。🎬",
-      "プロキシ・AI・ツールを統合管理。🌐",
-      "最高の体験を、あなたに提供します。💎"
-    ];
-    const el = document.getElementById('typewriter');
-    let pIdx = 0, cIdx = 0, isDeleting = false;
-
-    function type() {
-      const current = phrases[pIdx];
-      if (isDeleting) {
-        el.textContent = current.substring(0, cIdx - 1);
-        cIdx--;
-      } else {
-        el.textContent = current.substring(0, cIdx + 1);
-        cIdx++;
+    // ── Typewriter ──
+    (function () {
+      const phrases = [
+        "Welcome to the Next Generation. ✨",
+        "動画を、もっと快適に、自由に。🎬",
+        "プロキシ・AI・ツールを統合管理。🌐",
+        "最高の体験を、あなたに提供します。💎"
+      ];
+      const el = document.getElementById('typewriter');
+      let pIdx = 0, cIdx = 0, isDeleting = false;
+      function type() {
+        const current = phrases[pIdx];
+        el.textContent = current.substring(0, isDeleting ? --cIdx : ++cIdx);
+        let speed = isDeleting ? 35 : 70;
+        if (!isDeleting && cIdx === current.length) { speed = 2200; isDeleting = true; }
+        else if (isDeleting && cIdx === 0) { isDeleting = false; pIdx = (pIdx + 1) % phrases.length; speed = 400; }
+        setTimeout(type, speed);
       }
+      type();
+    })();
 
-      let speed = isDeleting ? 40 : 80;
-      if (!isDeleting && cIdx === current.length) {
-        speed = 2500;
-        isDeleting = true;
-      } else if (isDeleting && cIdx === 0) {
-        isDeleting = false;
-        pIdx = (pIdx + 1) % phrases.length;
-        speed = 500;
-      }
-      setTimeout(type, speed);
-    }
-    window.onload = type;
+    // ── Clock ──
+    (function () {
+      const el = document.getElementById('clock');
+      if (!el) return;
+      const tick = () => {
+        const d = new Date();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        el.textContent = `${hh}:${mm}`;
+      };
+      tick();
+      setInterval(tick, 30000);
+    })();
 
-    // ── Secure Navigation ──
+    // ── App count (auto) ──
+    (function () {
+      const cards = document.querySelectorAll('.card[data-endpoint]');
+      const el = document.getElementById('statApps');
+      if (el) el.textContent = cards.length;
+    })();
+
+    // ── Card interactions (navigate + cursor glow) ──
     document.querySelectorAll('.card').forEach(card => {
       const run = () => {
         const url = card.getAttribute('data-endpoint');
-        if (url) {
-          card.style.transform = "scale(0.98) translateY(0)";
-          card.style.opacity = "0.7";
-          setTimeout(() => window.location.href = url, 150);
-        }
+        if (!url) return;
+        card.style.transform = "translateY(-3px) scale(0.985)";
+        card.style.opacity = "0.75";
+        setTimeout(() => { window.location.href = url; }, 140);
       };
       card.addEventListener('click', run);
-      card.addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); run(); }
+      });
+      card.addEventListener('mousemove', (e) => {
+        const r = card.getBoundingClientRect();
+        card.style.setProperty('--mx', `${e.clientX - r.left}px`);
+        card.style.setProperty('--my', `${e.clientY - r.top}px`);
+      });
     });
 
     // ── Service Worker ──

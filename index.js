@@ -2009,9 +2009,15 @@ app.get('/ai-fetch/:videoId', async (req, res) => {
     }
 });
 
-app.get("/youtube-pro", (req, res) => {
+// アプリランチャー（ホーム）
+// 新ルート: /launcher, /min-tube-slim
+// 旧ルート: /youtube-pro (後方互換)
+const _launcherHandler = (req, res) => {
   res.sendFile(path.join(__dirname, "public", "min-tube-slim.html"));
-});
+};
+app.get("/launcher", _launcherHandler);
+app.get("/min-tube-slim", _launcherHandler);
+app.get("/youtube-pro", _launcherHandler);
 
 app.get("/min-img.png", (req, res) => {
   const filePath = path.join(__dirname, "img", "min-tube-slim.png");
