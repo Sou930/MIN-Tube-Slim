@@ -233,6 +233,90 @@ setInterval(() => {
     }
 }, 300000);
 
+// ──────────────────────────────────────────────────────────────────────────
+// v1.4.0: APIレスポンスキャッシュ
+//  - 人気動画 / 検索 / 関連動画 のレスポンスを TTL 付きでキャッシュ
+//  - YouTube バックエンドへの問い合わせ回数を削減し、体感速度・コストを改善
+//  - Redis が使える環境 (REDIS_URL が設定されている) なら Redis を優先し、
+//    無ければ自動でメモリキャッシュにフォールバック
+//  - LRU 風: 上限サイズに達したら最も古いキーを削除
+// ──────────────────────────────────────────────────────────────────────────
+const RESPONSE_CACHE_MAX = 500;
+const responseCacheMem = new Map(); // key -> { expiry, payload }
+
+// Redis (任意)。redis モジュールが入っていれば利用する。
+let redisClient = null;
+(async () => {
+  if (!process.env.REDIS_URL) return;
+  try {
+    // 動的 require: redis 未インストールでも他機能に影響を出さない
+    const redisLib = require('redis');
+    redisClient = redisLib.createClient({ url: process.env.REDIS_URL });
+    redisClient.on('error', (e) => console.warn('[cache] Redis error:', e.message));
+    await redisClient.connect();
+    console.log('[cache] Redis connected for response cache');
+  } catch (e) {
+    redisClient = null;
+    console.log('[cache] Redis not available, using in-memory cache');
+  }
+})();
+
+async function cacheGet(key) {
+  if (redisClient) {
+    try {
+      const v = await redisClient.get(key);
+      if (v) return JSON.parse(v);
+    } catch (e) { /* fallthrough */ }
+  }
+  const entry = responseCacheMem.get(key);
+  if (!entry) return null;
+  if (entry.expiry < Date.now()) {
+    responseCacheMem.delete(key);
+    return null;
+  }
+  // LRU: 最近アクセスされたキーを末尾に移動
+  responseCacheMem.delete(key);
+  responseCacheMem.set(key, entry);
+  return entry.payload;
+}
+
+async function cacheSet(key, payload, ttlMs) {
+  if (redisClient) {
+    try {
+      await redisClient.set(key, JSON.stringify(payload), { PX: ttlMs });
+    } catch (e) { /* ignore */ }
+  }
+  responseCacheMem.set(key, { expiry: Date.now() + ttlMs, payload });
+  // メモリ上限の制御
+  if (responseCacheMem.size > RESPONSE_CACHE_MAX) {
+    const oldestKey = responseCacheMem.keys().next().value;
+    if (oldestKey) responseCacheMem.delete(oldestKey);
+  }
+}
+
+// 期限切れエントリの定期掃除
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of responseCacheMem.entries()) {
+    if (v.expiry < now) responseCacheMem.delete(k);
+  }
+}, 5 * 60 * 1000);
+
+// レスポンスキャッシュ統計用 (デバッグ・運用確認用)
+const cacheStats = { hit: 0, miss: 0 };
+app.get('/api/_cache-stats', (req, res) => {
+  res.json({
+    backend: redisClient ? 'redis+memory' : 'memory',
+    memorySize: responseCacheMem.size,
+    memoryLimit: RESPONSE_CACHE_MAX,
+    hit: cacheStats.hit,
+    miss: cacheStats.miss,
+    hitRate: cacheStats.hit + cacheStats.miss === 0
+      ? 0
+      : +(cacheStats.hit / (cacheStats.hit + cacheStats.miss) * 100).toFixed(2)
+  });
+});
+
 // v1.3.0: MinTubeでの偽装ページ/ローディング表示を削除（人間確認ミドルウェア廃止）。
 // 旧仕様では humanVerified Cookie が無い場合に robots テンプレートで
 // ダミーの「読み込み中ページ」「reCAPTCHA 風の確認ページ」を返していたが、
@@ -252,6 +336,17 @@ app.get("/", (req, res) => {
 
 app.get("/api/trending", async (req, res) => {
   const page = parseInt(req.query.page) || 0;
+  const cacheKey = `trending:p${page}`;
+  // 人気動画は変動が比較的緩やか -> 10 分キャッシュ
+  const cached = await cacheGet(cacheKey);
+  if (cached) {
+    cacheStats.hit++;
+    res.setHeader('X-Cache', 'HIT');
+    // クライアントブラウザにも短期キャッシュを許可
+    res.setHeader('Cache-Control', 'public, max-age=120');
+    return res.json(cached);
+  }
+  cacheStats.miss++;
   try {
     const trendingSeeds = [
       "人気急上昇", "最新 ニュース", "Music Video Official", 
@@ -288,8 +383,13 @@ app.get("/api/trending", async (req, res) => {
     }
 
     const result = finalItems.sort(() => 0.5 - Math.random());
-    res.json({ items: result });
-    
+    const payload = { items: result };
+    // 10 分キャッシュ
+    await cacheSet(cacheKey, payload, 10 * 60 * 1000);
+    res.setHeader('X-Cache', 'MISS');
+    res.setHeader('Cache-Control', 'public, max-age=120');
+    res.json(payload);
+
   } catch (err) {
     console.error("Trending API Error:", err);
     res.json({ items: [] });
@@ -301,6 +401,18 @@ app.get("/api/search", async (req, res, next) => {
   const query = req.query.q;
   const page = parseInt(req.query.page) || 0;
   if (!query) return res.status(400).json({ error: "Query required" });
+
+  const cacheKey = `search:${query.toLowerCase()}:p${page}`;
+  // 検索結果は 5 分キャッシュ (同じクエリの連続検索/ページネーションで API コール削減)
+  const cached = await cacheGet(cacheKey);
+  if (cached) {
+    cacheStats.hit++;
+    res.setHeader('X-Cache', 'HIT');
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    return res.json(cached);
+  }
+  cacheStats.miss++;
+
   try {
     // メインは youtube-search-api のみ。withPlaylist=true で playlist 型もそのまま含めて取得。
     // 読み込みを最大限高速化するため、外部バックエンドへのフォローアップ問い合わせは行わない。
@@ -310,7 +422,12 @@ app.get("/api/search", async (req, res, next) => {
     // チャンネル画像を videoRenderer から補完（キャッシュ有り・タイムアウト短め）
     try { await enrichItemsWithChannelMeta(items, query); } catch (e) {}
 
-    res.json({ items, nextPage: ytsRes ? ytsRes.nextPage : null });
+    const payload = { items, nextPage: ytsRes ? ytsRes.nextPage : null };
+    // 5 分キャッシュ
+    await cacheSet(cacheKey, payload, 5 * 60 * 1000);
+    res.setHeader('X-Cache', 'MISS');
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.json(payload);
   } catch (err) { next(err); }
 });
 
@@ -318,8 +435,21 @@ app.get("/api/search", async (req, res, next) => {
 // ── プレイリスト ──
 app.get('/api/playlist/:id', async (req, res) => {
   const playlistId = req.params.id;
+  const cacheKey = `playlist:${playlistId}`;
+  const cached = await cacheGet(cacheKey);
+  if (cached) {
+    cacheStats.hit++;
+    res.setHeader('X-Cache', 'HIT');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    return res.json(cached);
+  }
+  cacheStats.miss++;
   try {
     const result = await yts.GetPlaylistData(playlistId, 100);
+    // プレイリスト内容は比較的安定 -> 30 分キャッシュ
+    await cacheSet(cacheKey, result, 30 * 60 * 1000);
+    res.setHeader('X-Cache', 'MISS');
+    res.setHeader('Cache-Control', 'public, max-age=300');
     res.json(result);
   } catch (e) {
     res.json({ items: [], metadata: {} });
@@ -452,6 +582,20 @@ app.get('/playlist', async (req, res) => {
 
 app.get("/api/recommendations", async (req, res) => {
   const { title, channel, id } = req.query;
+
+  // タイトル＋チャンネルでキャッシュキーを構成 (id は除外して類似動画でも共有可能に)
+  const cacheKey = `reco:${(title||'').toLowerCase().slice(0,80)}::${(channel||'').toLowerCase().slice(0,40)}`;
+  const cached = await cacheGet(cacheKey);
+  if (cached) {
+    cacheStats.hit++;
+    res.setHeader('X-Cache', 'HIT');
+    res.setHeader('Cache-Control', 'public, max-age=120');
+    // 視聴中の動画自身を除外して返却
+    const filtered = (cached.items || []).filter(it => it && it.id !== id);
+    return res.json({ items: filtered });
+  }
+  cacheStats.miss++;
+
   try {
     const cleanKwd = title
       .replace(/[【】「」()!！?？\[\]]/g, ' ')
@@ -497,7 +641,13 @@ app.get("/api/recommendations", async (req, res) => {
     }
 
     const result = finalItems.sort(() => 0.5 - Math.random());
-    res.json({ items: result });
+    const payload = { items: result };
+    // 関連動画は 10 分キャッシュ
+    await cacheSet(cacheKey, payload, 10 * 60 * 1000);
+    res.setHeader('X-Cache', 'MISS');
+    res.setHeader('Cache-Control', 'public, max-age=120');
+    // 視聴中の動画自身は除外して返す
+    res.json({ items: result.filter(it => it && it.id !== id) });
   } catch (err) {
     console.error("Rec Engine Error:", err);
     res.json({ items: [] });
