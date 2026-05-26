@@ -456,6 +456,76 @@
     .details .channel-name { font-size: 13px; color: var(--text-muted); margin-bottom: 2px; }
     .details .video-stats { font-size: 13px; color: var(--text-muted); }
 
+    /* =====================================================================
+       v1.4.0: 動画カード スケルトンローディング (YouTube 風)
+       「読み込み中…」のテキストを削除し、実際の動画カードと同じ寸法の
+       skeleton を表示することで LCP・CLS を改善し体感速度を高める。
+       ===================================================================== */
+    .skeleton-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px 16px;
+      row-gap: 40px;
+    }
+    .skeleton-card {
+      display: flex; flex-direction: column;
+    }
+    .skeleton-thumb {
+      width: 100%; aspect-ratio: 16/9;
+      background: var(--card);
+      border-radius: 12px;
+      overflow: hidden; position: relative;
+      margin-bottom: 12px;
+    }
+    .skeleton-meta { display: flex; gap: 12px; align-items: flex-start; }
+    .skeleton-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--card); flex-shrink: 0;
+      position: relative; overflow: hidden;
+    }
+    .skeleton-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+    .skeleton-line {
+      height: 14px; background: var(--card); border-radius: 4px;
+      position: relative; overflow: hidden;
+    }
+    .skeleton-line.short { width: 60%; height: 12px; }
+    .skeleton-line.shorter { width: 40%; height: 12px; }
+
+    /* シマー (左→右に流れる光沢) */
+    .skeleton-thumb::after,
+    .skeleton-avatar::after,
+    .skeleton-line::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255,255,255,0.06) 50%,
+        transparent 100%
+      );
+      transform: translateX(-100%);
+      animation: skeleton-shimmer 1.4s ease-in-out infinite;
+    }
+    body.light-mode .skeleton-thumb::after,
+    body.light-mode .skeleton-avatar::after,
+    body.light-mode .skeleton-line::after {
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(0,0,0,0.06) 50%,
+        transparent 100%
+      );
+    }
+    @keyframes skeleton-shimmer {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    /* ユーザーが reduce motion を希望している場合はシマーを止める */
+    @media (prefers-reduced-motion: reduce) {
+      .skeleton-thumb::after,
+      .skeleton-avatar::after,
+      .skeleton-line::after { animation: none; }
+    }
+
     /* Three-dot menu on card */
     .card-menu-btn {
       background: none; border: none; color: var(--text-muted);
@@ -855,10 +925,25 @@
 .filter-bar { display: none; }
 body.is-search .filter-bar { display: flex; }
 
+/*
+ * YouTube 本家のレイアウトに準拠:
+ *   - 検索結果一覧の上部に配置 (chips-bar の下)
+ *   - 「フィルター」ボタンは右寄せ
+ *   - 下に 1px の薄い区切り線
+ *   - 余白はコンテンツ領域に合わせる
+ */
 .filter-bar {
-  flex-wrap: wrap; align-items: center; gap: 10px;
-  padding: 8px 24px 12px; border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;   /* YouTube と同じく右寄せ */
+  gap: 10px;
+  padding: 12px 40px 12px;     /* 上下 12px、左右はコンテンツ幅に合わせる */
+  margin: 0 0 16px;            /* 結果との間に少しスペース */
+  border-bottom: 1px solid var(--border);
   background: var(--bg);
+}
+@media (max-width: 1024px) {
+  .filter-bar { padding: 10px 24px; }
 }
 .filter-toggle-btn {
   background: var(--chip-bg); color: var(--text);
@@ -879,14 +964,18 @@ body.is-search .filter-bar { display: flex; }
   background: var(--border); margin: 4px 6px;
 }
 .filter-count {
-  font-size: 12px; color: var(--text-muted); margin-left: auto;
+  font-size: 12px; color: var(--text-muted);
+  /* 右寄せのバーでは結果件数を一番左に配置する */
+  margin-right: auto;
+  order: -1;
 }
 
 /* フィルターポップオーバー */
 .filter-popover-wrap { position: relative; }
 .filter-popover {
   display: none;
-  position: absolute; top: calc(100% + 8px); left: 0;
+  /* 右寄せのトグルボタンから垂直方向にポップオーバーを表示 */
+  position: absolute; top: calc(100% + 8px); right: 0;
   background: var(--card); border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
@@ -926,11 +1015,12 @@ body.light-mode .filter-option:hover { background: rgba(0,0,0,0.05); }
 }
 
 @media (max-width: 800px) {
-  .filter-popover { min-width: 0; left: 0; right: 0; width: calc(100vw - 32px); }
+  .filter-popover { min-width: 0; left: auto; right: 0; width: min(calc(100vw - 32px), 520px); }
   .filter-popover-grid { grid-template-columns: repeat(2, 1fr); row-gap: 16px; }
 }
 @media (max-width: 768px) {
-  .filter-bar { padding: 8px 16px 10px; gap: 8px; }
+  .filter-bar { padding: 8px 16px 10px; gap: 8px; justify-content: flex-end; }
+  .filter-count { font-size: 11px; }
 }
 .video-card.filtered-hidden { display: none !important; }
 .channel-result-card.filtered-hidden { display: none !important; }
@@ -1536,12 +1626,8 @@ body.light-mode .notify-item-remove:hover { background: rgba(0,0,0,0.08); }
         </div>
 
         <div id="videoGrid" class="video-grid"></div>
-        <div id="loading" style="display:none;">
-          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--text-muted)" stroke-width="2" style="animation:spin 1s linear infinite;margin-bottom:8px;display:block;margin-left:auto;margin-right:auto;">
-            <circle cx="12" cy="12" r="10" stroke-dasharray="30 60" stroke-linecap="round"/>
-          </svg>
-          読み込み中...
-        </div>
+        <!-- v1.4.0: スケルトンローダー (動画カードと同じ寸法で表示し LCP/CLS を改善) -->
+        <div id="loading" class="skeleton-grid" aria-hidden="true" style="display:none;margin-top:24px;"></div>
       </div>
     </main>
   </div>
@@ -1710,6 +1796,54 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
     const shortsRow = document.getElementById('shortsRow');
     const shortsToggle = document.getElementById('shortsToggle');
     const sidebar = document.getElementById('sidebar');
+
+    // v1.4.0: スケルトンローディング
+    //  - 動画カードと同寸の placeholder を表示することで LCP/CLS を改善
+    //  - showSkeleton(n) で n 枚表示、hideSkeleton() で消す
+    //  - 既存コードの loading.style.display = 'block'/'none' との互換ラッパー
+    function buildSkeletonCard() {
+      const card = document.createElement('div');
+      card.className = 'skeleton-card';
+      card.innerHTML = `
+        <div class="skeleton-thumb"></div>
+        <div class="skeleton-meta">
+          <div class="skeleton-avatar"></div>
+          <div class="skeleton-text">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+            <div class="skeleton-line shorter"></div>
+          </div>
+        </div>`;
+      return card;
+    }
+    function renderSkeleton(count = 8) {
+      if (!loading) return;
+      // 既に同じ枚数なら DOM 再構築をスキップ
+      if (loading.childElementCount === count) return;
+      loading.innerHTML = '';
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < count; i++) frag.appendChild(buildSkeletonCard());
+      loading.appendChild(frag);
+    }
+    // loading.style.display プロパティをフックして skeleton を自動制御
+    (function hookLoadingDisplay() {
+      if (!loading) return;
+      const origStyle = loading.style;
+      const desc = Object.getOwnPropertyDescriptor(CSSStyleDeclaration.prototype, 'display');
+      // 互換: 個別の loading.style.display = 'block' で skeleton も描画
+      const origSetProperty = origStyle.setProperty.bind(origStyle);
+      const observer = new MutationObserver(() => {
+        const visible = loading.style.display !== 'none' && loading.style.display !== '';
+        if (visible) {
+          // 初回検索 (グリッド空) なら多め、無限スクロール継続時は少なめ
+          const n = videoGrid.childElementCount === 0 ? 12 : 4;
+          renderSkeleton(n);
+        } else {
+          loading.innerHTML = '';
+        }
+      });
+      observer.observe(loading, { attributes: true, attributeFilter: ['style'] });
+    })();
 
     let displayedIds = new Set();
     let isFetching = false;
