@@ -2019,6 +2019,11 @@ app.get("/launcher", _launcherHandler);
 app.get("/min-tube-slim", _launcherHandler);
 app.get("/youtube-pro", _launcherHandler);
 
+// ===== Browser OS (MinOS) =====
+app.get(["/os", "/min-os", "/desktop"], (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "browser-os.html"));
+});
+
 app.get("/min-img.png", (req, res) => {
   const filePath = path.join(__dirname, "img", "min-tube-slim.png");
   res.sendFile(filePath);

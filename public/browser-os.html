@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>MinOS — MIN-Tube-Slim Browser OS</title>
+<link rel="icon" href="/min-img.png" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-1:#0b1224;
+    --bg-2:#1a1a40;
+    --accent:#3b82f6;
+    --accent-2:#8b5cf6;
+    --glass:rgba(20,22,40,.55);
+    --glass-strong:rgba(15,17,32,.85);
+    --border:rgba(255,255,255,.12);
+    --text:#f1f5f9;
+    --text-sub:#94a3b8;
+    --taskbar-h:52px;
+    --radius:14px;
+    --shadow:0 10px 40px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+  html,body{width:100%;height:100%;overflow:hidden;color:var(--text);user-select:none;-webkit-user-select:none}
+  body{
+    background:
+      radial-gradient(1200px 800px at 10% 10%, #2a3a8a55, transparent 60%),
+      radial-gradient(1000px 700px at 90% 80%, #6d28d955, transparent 60%),
+      linear-gradient(135deg, var(--bg-1), var(--bg-2));
+    background-attachment: fixed;
+  }
+  .material-symbols-rounded{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;display:inline-block;line-height:1;vertical-align:middle;font-size:20px;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
+
+  /* ========= デスクトップ ========= */
+  #desktop{
+    position:absolute;inset:0;
+    padding:24px;
+    padding-bottom: calc(var(--taskbar-h) + 24px);
+    display:grid;
+    grid-template-columns: repeat(auto-fill, 96px);
+    grid-auto-rows: 110px;
+    gap:8px;
+    align-content:start;
+    overflow:hidden;
+  }
+  .icon{
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    padding:8px 4px;border-radius:10px;cursor:pointer;text-align:center;
+    transition:background .15s, transform .1s;
+    color:#fff;
+  }
+  .icon:hover{background:rgba(255,255,255,.10)}
+  .icon:active{transform:scale(.96)}
+  .icon .ico{
+    width:54px;height:54px;border-radius:12px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    display:flex;align-items:center;justify-content:center;margin-bottom:6px;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+  }
+  .icon .ico .material-symbols-rounded{font-size:30px;color:#fff}
+  .icon .label{
+    font-size:12px;line-height:1.2;max-width:88px;text-shadow:0 1px 3px rgba(0,0,0,.7);
+    word-break:break-word;
+  }
+
+  /* ========= ウィンドウ ========= */
+  #window-layer{position:absolute;inset:0;pointer-events:none}
+  .window{
+    position:absolute;
+    min-width:320px;min-height:200px;
+    width:760px;height:520px;
+    background:var(--glass-strong);
+    backdrop-filter:blur(20px) saturate(140%);
+    -webkit-backdrop-filter:blur(20px) saturate(140%);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    display:flex;flex-direction:column;
+    overflow:hidden;
+    pointer-events:auto;
+    transition:opacity .15s, transform .15s;
+  }
+  .window.minimized{transform:translateY(40px) scale(.96);opacity:0;pointer-events:none}
+  .window.maximized{
+    top:0!important;left:0!important;
+    width:100%!important;height:calc(100% - var(--taskbar-h))!important;
+    border-radius:0!important;
+  }
+  .window-header{
+    height:38px;flex-shrink:0;
+    display:flex;align-items:center;gap:10px;
+    padding:0 10px;
+    background:rgba(255,255,255,.04);
+    border-bottom:1px solid var(--border);
+    cursor:grab;user-select:none;
+  }
+  .window-header:active{cursor:grabbing}
+  .window-title{flex:1;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .window-title .app-icon{width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .window-title .app-icon .material-symbols-rounded{font-size:12px}
+  .win-btns{display:flex;gap:6px}
+  .win-btn{
+    width:14px;height:14px;border-radius:50%;border:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:transparent;
+    transition:color .15s;
+  }
+  .win-btn:hover{color:rgba(0,0,0,.6)}
+  .win-btn .material-symbols-rounded{font-size:10px}
+  .win-btn.min{background:#fbbf24}
+  .win-btn.max{background:#34d399}
+  .win-btn.close{background:#ef4444}
+  .window-body{
+    flex:1;position:relative;background:#0a0e1a;overflow:hidden;
+  }
+  .window-body iframe{
+    width:100%;height:100%;border:0;display:block;background:#fff;
+  }
+  .window-resizer{
+    position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;
+    background:linear-gradient(135deg,transparent 50%, rgba(255,255,255,.35) 50%);
+    border-bottom-right-radius:var(--radius);
+  }
+
+  /* ========= タスクバー ========= */
+  #taskbar{
+    position:absolute;left:0;right:0;bottom:0;
+    height:var(--taskbar-h);
+    background:var(--glass-strong);
+    backdrop-filter:blur(20px) saturate(160%);
+    -webkit-backdrop-filter:blur(20px) saturate(160%);
+    border-top:1px solid var(--border);
+    display:flex;align-items:center;
+    padding:0 10px;
+    z-index:9999;
+  }
+  #start-btn{
+    width:42px;height:42px;border-radius:10px;border:none;cursor:pointer;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:#fff;display:flex;align-items:center;justify-content:center;
+    transition:transform .12s, box-shadow .15s;
+  }
+  #start-btn:hover{box-shadow:0 0 0 3px rgba(59,130,246,.3)}
+  #start-btn:active{transform:scale(.94)}
+  #start-btn .material-symbols-rounded{font-size:26px}
+
+  #taskbar-apps{
+    flex:1;display:flex;gap:6px;align-items:center;padding:0 12px;
+    overflow-x:auto;overflow-y:hidden;
+  }
+  #taskbar-apps::-webkit-scrollbar{height:0}
+  .task-item{
+    height:38px;padding:0 12px;border-radius:8px;background:rgba(255,255,255,.06);
+    border:1px solid var(--border);color:#fff;cursor:pointer;display:flex;align-items:center;gap:8px;
+    font-size:12px;font-weight:500;max-width:200px;
+    transition:background .15s;
+    position:relative;
+  }
+  .task-item:hover{background:rgba(255,255,255,.12)}
+  .task-item.active{background:rgba(59,130,246,.25);border-color:rgba(59,130,246,.6)}
+  .task-item.active::after{
+    content:"";position:absolute;left:50%;bottom:-1px;width:24px;height:2px;
+    background:var(--accent);border-radius:2px;transform:translateX(-50%);
+  }
+  .task-item .app-icon{width:16px;height:16px;border-radius:4px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .task-item .app-icon .material-symbols-rounded{font-size:11px}
+  .task-item .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  #tray{
+    display:flex;align-items:center;gap:14px;padding:0 12px;color:var(--text);font-size:12px;
+  }
+  #tray .icon-btn{
+    width:34px;height:34px;border-radius:8px;border:none;background:transparent;color:var(--text);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  #tray .icon-btn:hover{background:rgba(255,255,255,.08)}
+  #clock{
+    text-align:right;line-height:1.2;cursor:pointer;padding:4px 8px;border-radius:8px;
+  }
+  #clock:hover{background:rgba(255,255,255,.08)}
+  #clock .t{font-size:13px;font-weight:600}
+  #clock .d{font-size:11px;color:var(--text-sub)}
+
+  /* ========= スタートメニュー ========= */
+  #start-menu{
+    position:absolute;left:10px;bottom:calc(var(--taskbar-h) + 8px);
+    width:480px;max-height:560px;
+    background:var(--glass-strong);
+    backdrop-filter:blur(24px) saturate(160%);
+    -webkit-backdrop-filter:blur(24px) saturate(160%);
+    border:1px solid var(--border);border-radius:16px;
+    box-shadow:var(--shadow);
+    padding:18px;
+    display:none;flex-direction:column;gap:14px;
+    z-index:10000;
+    animation:menuIn .18s ease-out;
+  }
+  #start-menu.show{display:flex}
+  @keyframes menuIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .sm-search{
+    display:flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,.06);border:1px solid var(--border);
+    border-radius:10px;padding:8px 12px;
+  }
+  .sm-search input{
+    flex:1;background:transparent;border:none;color:#fff;font-size:13px;outline:none;
+  }
+  .sm-section-title{font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-top:4px}
+  .sm-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+    overflow-y:auto;max-height:380px;padding-right:4px;
+  }
+  .sm-grid::-webkit-scrollbar{width:6px}
+  .sm-grid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:3px}
+  .sm-app{
+    display:flex;flex-direction:column;align-items:center;text-align:center;
+    padding:12px 6px;border-radius:10px;cursor:pointer;
+    transition:background .15s, transform .1s;
+  }
+  .sm-app:hover{background:rgba(255,255,255,.08)}
+  .sm-app:active{transform:scale(.95)}
+  .sm-app .ico{
+    width:46px;height:46px;border-radius:11px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    display:flex;align-items:center;justify-content:center;margin-bottom:6px;
+  }
+  .sm-app .ico .material-symbols-rounded{font-size:26px}
+  .sm-app .name{font-size:11px;line-height:1.2;max-width:90px;word-break:break-word}
+
+  .sm-bottom{display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border)}
+  .sm-user{display:flex;align-items:center;gap:8px;font-size:13px}
+  .sm-user .avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-weight:700}
+  .sm-power{background:transparent;border:none;color:#fff;cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+  .sm-power:hover{background:rgba(239,68,68,.25)}
+
+  /* ========= ブートスクリーン ========= */
+  #boot{
+    position:absolute;inset:0;z-index:99999;
+    background:linear-gradient(135deg,#0b1224,#1a1a40);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+    transition:opacity .5s;
+  }
+  #boot.hide{opacity:0;pointer-events:none}
+  #boot .logo{
+    width:96px;height:96px;border-radius:24px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 60px rgba(59,130,246,.6);
+    animation:pulse 1.6s ease-in-out infinite;
+  }
+  #boot .logo .material-symbols-rounded{font-size:54px;color:#fff}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  #boot .title{font-size:24px;font-weight:700;letter-spacing:.04em}
+  #boot .sub{font-size:13px;color:var(--text-sub)}
+  #boot .spinner{
+    margin-top:8px;width:32px;height:32px;border:3px solid rgba(255,255,255,.15);
+    border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ========= コンテキストメニュー ========= */
+  #ctx-menu{
+    position:absolute;display:none;
+    background:var(--glass-strong);border:1px solid var(--border);border-radius:10px;
+    backdrop-filter:blur(20px);padding:6px;min-width:180px;
+    box-shadow:var(--shadow);z-index:10001;
+  }
+  #ctx-menu.show{display:block}
+  .ctx-item{padding:8px 12px;font-size:13px;cursor:pointer;border-radius:6px;display:flex;align-items:center;gap:10px}
+  .ctx-item:hover{background:rgba(255,255,255,.08)}
+  .ctx-divider{height:1px;background:var(--border);margin:4px 0}
+
+  /* ========= モバイル ========= */
+  @media (max-width:640px){
+    #desktop{grid-template-columns:repeat(auto-fill,80px);grid-auto-rows:96px;padding:16px;padding-bottom:calc(var(--taskbar-h) + 16px)}
+    .icon .ico{width:46px;height:46px}
+    #start-menu{left:6px;right:6px;width:auto;max-height:70vh}
+    .sm-grid{grid-template-columns:repeat(3,1fr)}
+    .window{width:96%!important;height:75%!important;left:2%!important;top:5%!important}
+    .task-item .lbl{display:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- ブート画面 -->
+<div id="boot">
+  <div class="logo"><span class="material-symbols-rounded">desktop_windows</span></div>
+  <div class="title">MinOS</div>
+  <div class="sub">Powered by MIN-Tube-Slim</div>
+  <div class="spinner"></div>
+</div>
+
+<!-- デスクトップ -->
+<div id="desktop"></div>
+
+<!-- ウィンドウ表示レイヤー -->
+<div id="window-layer"></div>
+
+<!-- スタートメニュー -->
+<div id="start-menu">
+  <div class="sm-search">
+    <span class="material-symbols-rounded" style="font-size:18px;color:var(--text-sub)">search</span>
+    <input id="sm-search-input" type="text" placeholder="アプリやファイルを検索..." />
+  </div>
+  <div class="sm-section-title">すべてのアプリ</div>
+  <div class="sm-grid" id="sm-grid"></div>
+  <div class="sm-bottom">
+    <div class="sm-user">
+      <div class="avatar">M</div>
+      <div>ゲスト</div>
+    </div>
+    <button class="sm-power" id="sm-power" title="シャットダウン">
+      <span class="material-symbols-rounded">power_settings_new</span>
+    </button>
+  </div>
+</div>
+
+<!-- タスクバー -->
+<div id="taskbar">
+  <button id="start-btn" title="スタート">
+    <span class="material-symbols-rounded">apps</span>
+  </button>
+  <div id="taskbar-apps"></div>
+  <div id="tray">
+    <button class="icon-btn" id="show-desktop-btn" title="デスクトップを表示">
+      <span class="material-symbols-rounded">desktop_windows</span>
+    </button>
+    <button class="icon-btn" id="fullscreen-btn" title="全画面">
+      <span class="material-symbols-rounded">fullscreen</span>
+    </button>
+    <div id="clock">
+      <div class="t" id="clock-time">--:--</div>
+      <div class="d" id="clock-date">----/--/--</div>
+    </div>
+  </div>
+</div>
+
+<!-- コンテキストメニュー -->
+<div id="ctx-menu">
+  <div class="ctx-item" data-action="refresh"><span class="material-symbols-rounded" style="font-size:16px">refresh</span>更新</div>
+  <div class="ctx-item" data-action="newwin"><span class="material-symbols-rounded" style="font-size:16px">add</span>新しいブラウザ</div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item" data-action="about"><span class="material-symbols-rounded" style="font-size:16px">info</span>MinOSについて</div>
+</div>
+
+<script>
+/* ============================================================
+   MinOS — ブラウザOS for MIN-Tube-Slim
+   ============================================================ */
+
+// アプリ定義
+const APPS = [
+  { id:'mintube',  name:'MIN-Tube',     icon:'smart_display', color:['#ef4444','#f97316'], url:'/min-tube-slim', w:1100, h:680, desktop:true },
+  { id:'search',   name:'検索',         icon:'search',        color:['#3b82f6','#06b6d4'], url:'/app/search.html', w:1000, h:640, desktop:true },
+  { id:'ai',       name:'AI チャット',  icon:'smart_toy',     color:['#8b5cf6','#ec4899'], url:'/ai', w:900, h:640, desktop:true },
+  { id:'anime',    name:'アニメ',       icon:'animation',     color:['#ec4899','#f43f5e'], url:'/anime', w:1000, h:640, desktop:true },
+  { id:'games',    name:'ゲーム',       icon:'sports_esports',color:['#10b981','#06b6d4'], url:'/game', w:1000, h:640, desktop:true },
+  { id:'minecraft',name:'Minecraft',    icon:'view_in_ar',    color:['#16a34a','#22d3ee'], url:'/minecraft', w:1000, h:640 },
+  { id:'chat',     name:'チャット',     icon:'chat',          color:['#06b6d4','#3b82f6'], url:'/chat', w:800, h:600, desktop:true },
+  { id:'compiler', name:'Compiler',     icon:'code',          color:['#64748b','#0f172a'], url:'/app/compiler.html', w:1000, h:640 },
+  { id:'api',      name:'API ポータル', icon:'api',           color:['#f59e0b','#ef4444'], url:'/api-portal', w:1000, h:640 },
+  { id:'movie',    name:'Movie',        icon:'movie',         color:['#dc2626','#7c3aed'], url:'/movie', w:1000, h:640 },
+  { id:'subs',     name:'登録チャンネル',icon:'subscriptions', color:['#ef4444','#f59e0b'], url:'/subscriptions', w:1000, h:640 },
+  { id:'helios',   name:'Helios',       icon:'public',        color:['#0ea5e9','#6366f1'], url:'/helios', w:1000, h:640 },
+  { id:'nautilus', name:'Nautilus OS',  icon:'rocket_launch', color:['#6366f1','#8b5cf6'], url:'/nautilus-os', w:1000, h:640 },
+  { id:'dlpro',    name:'DL Pro',       icon:'download',      color:['#22c55e','#10b981'], url:'/dl-pro', w:900, h:600 },
+  { id:'rammer',   name:'Rammer',       icon:'extension',     color:['#a855f7','#3b82f6'], url:'/app/rammer.html', w:1000, h:640 },
+  { id:'settings', name:'設定',         icon:'settings',      color:['#475569','#1e293b'], url:'/app/settings.html', w:800, h:600, desktop:true },
+  { id:'update',   name:'アップデート', icon:'system_update', color:['#0ea5e9','#3b82f6'], url:'/update', w:800, h:600 },
+  { id:'browser',  name:'ブラウザ',     icon:'language',      color:['#3b82f6','#8b5cf6'], url:'about:blank', w:1000, h:640, desktop:true, special:'browser' },
+  { id:'about',    name:'MinOSについて',icon:'info',          color:['#64748b','#94a3b8'], special:'about', w:480, h:380 }
+];
+
+// ============= 状態管理 =============
+const state = {
+  windows: new Map(), // id => { el, app, x, y, w, h, z, minimized, maximized, prev }
+  zCounter: 100,
+  focused: null,
+};
+
+// ============= ユーティリティ =============
+const $ = sel => document.querySelector(sel);
+const $$ = sel => document.querySelectorAll(sel);
+
+function gradient(colors){ return `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`; }
+
+function makeAppIcon(app, size=20){
+  return `<div class="app-icon" style="background:${gradient(app.color)};width:${size}px;height:${size}px">
+    <span class="material-symbols-rounded" style="font-size:${Math.round(size*0.65)}px;color:#fff">${app.icon}</span>
+  </div>`;
+}
+
+// ============= デスクトップアイコン =============
+function buildDesktop(){
+  const desk = $('#desktop');
+  desk.innerHTML = '';
+  APPS.filter(a => a.desktop).forEach(app => {
+    const el = document.createElement('div');
+    el.className = 'icon';
+    el.dataset.appId = app.id;
+    el.innerHTML = `
+      <div class="ico" style="background:${gradient(app.color)}">
+        <span class="material-symbols-rounded">${app.icon}</span>
+      </div>
+      <div class="label">${app.name}</div>
+    `;
+    el.addEventListener('dblclick', () => openApp(app.id));
+    // モバイル/シングルタップ対応
+    let lastTap = 0;
+    el.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastTap < 400) openApp(app.id);
+      lastTap = now;
+    });
+    desk.appendChild(el);
+  });
+}
+
+// ============= スタートメニュー =============
+function buildStartMenu(filter=''){
+  const grid = $('#sm-grid');
+  grid.innerHTML = '';
+  const f = filter.trim().toLowerCase();
+  APPS.filter(a => !f || a.name.toLowerCase().includes(f) || a.id.toLowerCase().includes(f)).forEach(app => {
+    const el = document.createElement('div');
+    el.className = 'sm-app';
+    el.innerHTML = `
+      <div class="ico" style="background:${gradient(app.color)}">
+        <span class="material-symbols-rounded">${app.icon}</span>
+      </div>
+      <div class="name">${app.name}</div>
+    `;
+    el.addEventListener('click', () => {
+      openApp(app.id);
+      toggleStartMenu(false);
+    });
+    grid.appendChild(el);
+  });
+}
+
+function toggleStartMenu(show){
+  const menu = $('#start-menu');
+  if (show === undefined) show = !menu.classList.contains('show');
+  menu.classList.toggle('show', show);
+  if (show){
+    $('#sm-search-input').value = '';
+    buildStartMenu();
+    setTimeout(()=>$('#sm-search-input').focus(), 50);
+  }
+}
+
+// ============= ウィンドウシステム =============
+function openApp(appId, opts={}){
+  const app = APPS.find(a => a.id === appId);
+  if (!app) return;
+
+  // 既に開いている → フォーカス
+  if (state.windows.has(appId) && !opts.forceNew){
+    const w = state.windows.get(appId);
+    if (w.minimized) restoreWindow(appId);
+    focusWindow(appId);
+    return;
+  }
+
+  // 特殊アプリ
+  if (app.special === 'about'){ createAboutWindow(app); return; }
+  if (app.special === 'browser'){ createBrowserWindow(app); return; }
+
+  createWindow(app, app.url);
+}
+
+function createWindow(app, url){
+  const layer = $('#window-layer');
+  const id = app.id;
+
+  // 初期サイズ・位置
+  const maxW = window.innerWidth - 40;
+  const maxH = window.innerHeight - 80;
+  let w = Math.min(app.w || 760, maxW);
+  let h = Math.min(app.h || 520, maxH);
+  // 既存ウィンドウ数に応じてオフセット
+  const off = (state.windows.size % 6) * 28;
+  let x = Math.max(20, (window.innerWidth - w) / 2 + off - 80);
+  let y = Math.max(20, (window.innerHeight - h - 60) / 2 + off - 60);
+
+  const el = document.createElement('div');
+  el.className = 'window';
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  el.style.width = w + 'px';
+  el.style.height = h + 'px';
+  el.style.zIndex = ++state.zCounter;
+  el.dataset.appId = id;
+
+  el.innerHTML = `
+    <div class="window-header">
+      <div class="window-title">
+        ${makeAppIcon(app, 18)}
+        <span class="t">${app.name}</span>
+      </div>
+      <div class="win-btns">
+        <button class="win-btn min" title="最小化"><span class="material-symbols-rounded">remove</span></button>
+        <button class="win-btn max" title="最大化"><span class="material-symbols-rounded">crop_square</span></button>
+        <button class="win-btn close" title="閉じる"><span class="material-symbols-rounded">close</span></button>
+      </div>
+    </div>
+    <div class="window-body">
+      <iframe src="${url}" allow="autoplay; fullscreen; clipboard-write; encrypted-media" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-presentation"></iframe>
+    </div>
+    <div class="window-resizer"></div>
+  `;
+  layer.appendChild(el);
+
+  const wState = { el, app, x, y, w, h, minimized:false, maximized:false, prev:null };
+  state.windows.set(id, wState);
+
+  // イベント
+  const header = el.querySelector('.window-header');
+  enableDrag(el, header, wState);
+  enableResize(el, el.querySelector('.window-resizer'), wState);
+  el.querySelector('.win-btn.min').addEventListener('click', e => { e.stopPropagation(); minimizeWindow(id); });
+  el.querySelector('.win-btn.max').addEventListener('click', e => { e.stopPropagation(); toggleMaxWindow(id); });
+  el.querySelector('.win-btn.close').addEventListener('click', e => { e.stopPropagation(); closeWindow(id); });
+  header.addEventListener('dblclick', () => toggleMaxWindow(id));
+  el.addEventListener('mousedown', () => focusWindow(id));
+  el.addEventListener('touchstart', () => focusWindow(id), {passive:true});
+
+  rebuildTaskbar();
+  focusWindow(id);
+}
+
+function createAboutWindow(app){
+  const layer = $('#window-layer');
+  const id = app.id;
+  const w = 480, h = 380;
+  const x = (window.innerWidth - w)/2;
+  const y = (window.innerHeight - h - 60)/2;
+  const el = document.createElement('div');
+  el.className = 'window';
+  el.style.left = x+'px'; el.style.top = y+'px';
+  el.style.width = w+'px'; el.style.height = h+'px';
+  el.style.zIndex = ++state.zCounter;
+  el.dataset.appId = id;
+  el.innerHTML = `
+    <div class="window-header">
+      <div class="window-title">${makeAppIcon(app,18)}<span>MinOSについて</span></div>
+      <div class="win-btns">
+        <button class="win-btn close"><span class="material-symbols-rounded">close</span></button>
+      </div>
+    </div>
+    <div class="window-body" style="background:linear-gradient(135deg,#0b1224,#1a1a40);padding:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;text-align:center">
+      <div style="width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(59,130,246,.5)">
+        <span class="material-symbols-rounded" style="font-size:46px">desktop_windows</span>
+      </div>
+      <div style="font-size:22px;font-weight:700">MinOS v1.0</div>
+      <div style="font-size:13px;color:#94a3b8;line-height:1.6">
+        MIN-Tube-Slim 上で動作する<br>
+        ブラウザ完結型のデスクトップOS<br>
+      </div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px">© ${new Date().getFullYear()} mino — Powered by MIN-Tube-Slim</div>
+    </div>
+  `;
+  layer.appendChild(el);
+  const wState = { el, app, x, y, w, h, minimized:false, maximized:false, prev:null };
+  state.windows.set(id, wState);
+  enableDrag(el, el.querySelector('.window-header'), wState);
+  el.querySelector('.win-btn.close').addEventListener('click', e=>{ e.stopPropagation(); closeWindow(id); });
+  el.addEventListener('mousedown', ()=>focusWindow(id));
+  rebuildTaskbar();
+  focusWindow(id);
+}
+
+function createBrowserWindow(app){
+  // 簡易ブラウザ（アドレスバー付き）
+  const layer = $('#window-layer');
+  const id = 'browser_' + Date.now();
+  const w = Math.min(1000, window.innerWidth - 40);
+  const h = Math.min(640, window.innerHeight - 80);
+  const x = (window.innerWidth - w)/2;
+  const y = (window.innerHeight - h - 60)/2;
+  const el = document.createElement('div');
+  el.className = 'window';
+  el.style.left = x+'px'; el.style.top = y+'px';
+  el.style.width = w+'px'; el.style.height = h+'px';
+  el.style.zIndex = ++state.zCounter;
+  el.dataset.appId = id;
+  el.innerHTML = `
+    <div class="window-header">
+      <div class="window-title">${makeAppIcon(app,18)}<span>ブラウザ</span></div>
+      <div class="win-btns">
+        <button class="win-btn min"><span class="material-symbols-rounded">remove</span></button>
+        <button class="win-btn max"><span class="material-symbols-rounded">crop_square</span></button>
+        <button class="win-btn close"><span class="material-symbols-rounded">close</span></button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,.04);border-bottom:1px solid var(--border)">
+      <button class="icon-btn br-back" style="width:28px;height:28px;border-radius:6px;border:none;background:transparent;color:#fff;cursor:pointer"><span class="material-symbols-rounded" style="font-size:16px">arrow_back</span></button>
+      <button class="icon-btn br-fwd"  style="width:28px;height:28px;border-radius:6px;border:none;background:transparent;color:#fff;cursor:pointer"><span class="material-symbols-rounded" style="font-size:16px">arrow_forward</span></button>
+      <button class="icon-btn br-reload" style="width:28px;height:28px;border-radius:6px;border:none;background:transparent;color:#fff;cursor:pointer"><span class="material-symbols-rounded" style="font-size:16px">refresh</span></button>
+      <input class="br-url" type="text" placeholder="URLまたは検索ワード" style="flex:1;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--border);background:rgba(0,0,0,.3);color:#fff;font-size:12px;outline:none" />
+    </div>
+    <div class="window-body">
+      <iframe class="br-frame" src="/" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"></iframe>
+    </div>
+    <div class="window-resizer"></div>
+  `;
+  layer.appendChild(el);
+  const wState = { el, app:{...app, name:'ブラウザ'}, x, y, w, h, minimized:false, maximized:false, prev:null };
+  state.windows.set(id, wState);
+  enableDrag(el, el.querySelector('.window-header'), wState);
+  enableResize(el, el.querySelector('.window-resizer'), wState);
+
+  const frame = el.querySelector('.br-frame');
+  const urlInput = el.querySelector('.br-url');
+  urlInput.value = location.origin + '/';
+  const go = () => {
+    let u = urlInput.value.trim();
+    if (!u) return;
+    if (!/^https?:\/\//i.test(u) && !u.startsWith('/')){
+      // 検索扱い
+      u = '/app/search.html?q=' + encodeURIComponent(u);
+    }
+    frame.src = u;
+  };
+  urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  el.querySelector('.br-back').addEventListener('click', () => { try{ frame.contentWindow.history.back(); }catch{} });
+  el.querySelector('.br-fwd').addEventListener('click', () => { try{ frame.contentWindow.history.forward(); }catch{} });
+  el.querySelector('.br-reload').addEventListener('click', () => { frame.src = frame.src; });
+  frame.addEventListener('load', () => {
+    try { urlInput.value = frame.contentWindow.location.href; } catch {}
+  });
+
+  el.querySelector('.win-btn.min').addEventListener('click', e=>{ e.stopPropagation(); minimizeWindow(id); });
+  el.querySelector('.win-btn.max').addEventListener('click', e=>{ e.stopPropagation(); toggleMaxWindow(id); });
+  el.querySelector('.win-btn.close').addEventListener('click', e=>{ e.stopPropagation(); closeWindow(id); });
+  el.addEventListener('mousedown', ()=>focusWindow(id));
+  rebuildTaskbar();
+  focusWindow(id);
+}
+
+function focusWindow(id){
+  const w = state.windows.get(id);
+  if (!w) return;
+  w.el.style.zIndex = ++state.zCounter;
+  state.focused = id;
+  rebuildTaskbar();
+}
+
+function minimizeWindow(id){
+  const w = state.windows.get(id);
+  if (!w) return;
+  w.minimized = true;
+  w.el.classList.add('minimized');
+  rebuildTaskbar();
+}
+
+function restoreWindow(id){
+  const w = state.windows.get(id);
+  if (!w) return;
+  w.minimized = false;
+  w.el.classList.remove('minimized');
+  focusWindow(id);
+}
+
+function toggleMaxWindow(id){
+  const w = state.windows.get(id);
+  if (!w) return;
+  if (w.maximized){
+    w.maximized = false;
+    w.el.classList.remove('maximized');
+    if (w.prev){
+      w.el.style.left = w.prev.x + 'px';
+      w.el.style.top  = w.prev.y + 'px';
+      w.el.style.width = w.prev.w + 'px';
+      w.el.style.height = w.prev.h + 'px';
+    }
+  } else {
+    w.prev = { x:parseInt(w.el.style.left), y:parseInt(w.el.style.top), w:w.el.offsetWidth, h:w.el.offsetHeight };
+    w.maximized = true;
+    w.el.classList.add('maximized');
+  }
+  focusWindow(id);
+}
+
+function closeWindow(id){
+  const w = state.windows.get(id);
+  if (!w) return;
+  w.el.style.transition = 'opacity .15s, transform .15s';
+  w.el.style.opacity = '0';
+  w.el.style.transform = 'scale(.95)';
+  setTimeout(()=>{
+    w.el.remove();
+    state.windows.delete(id);
+    rebuildTaskbar();
+  }, 150);
+}
+
+// ============= ドラッグ =============
+function enableDrag(el, handle, wState){
+  let sx=0, sy=0, ox=0, oy=0, dragging=false;
+  const start = (e) => {
+    if (wState.maximized) return;
+    if (e.target.closest('.win-btn')) return;
+    const p = ('touches' in e) ? e.touches[0] : e;
+    dragging = true;
+    sx = p.clientX; sy = p.clientY;
+    ox = parseInt(el.style.left); oy = parseInt(el.style.top);
+    document.body.style.userSelect = 'none';
+  };
+  const move = (e) => {
+    if (!dragging) return;
+    const p = ('touches' in e) ? e.touches[0] : e;
+    let nx = ox + (p.clientX - sx);
+    let ny = oy + (p.clientY - sy);
+    nx = Math.max(-el.offsetWidth+80, Math.min(window.innerWidth-40, nx));
+    ny = Math.max(0, Math.min(window.innerHeight - 80, ny));
+    el.style.left = nx+'px';
+    el.style.top  = ny+'px';
+  };
+  const end = () => { dragging = false; document.body.style.userSelect = ''; };
+  handle.addEventListener('mousedown', start);
+  handle.addEventListener('touchstart', start, {passive:true});
+  document.addEventListener('mousemove', move);
+  document.addEventListener('touchmove', move, {passive:false});
+  document.addEventListener('mouseup', end);
+  document.addEventListener('touchend', end);
+}
+
+// ============= リサイズ =============
+function enableResize(el, handle, wState){
+  let sx=0, sy=0, sw=0, sh=0, resizing=false;
+  const start = (e) => {
+    if (wState.maximized) return;
+    const p = ('touches' in e) ? e.touches[0] : e;
+    resizing = true;
+    sx = p.clientX; sy = p.clientY;
+    sw = el.offsetWidth; sh = el.offsetHeight;
+    document.body.style.userSelect = 'none';
+    // ドラッグ中iframeのイベント奪取防止
+    el.querySelectorAll('iframe').forEach(f => f.style.pointerEvents = 'none');
+    e.stopPropagation();
+  };
+  const move = (e) => {
+    if (!resizing) return;
+    const p = ('touches' in e) ? e.touches[0] : e;
+    const nw = Math.max(320, sw + (p.clientX - sx));
+    const nh = Math.max(200, sh + (p.clientY - sy));
+    el.style.width = nw+'px';
+    el.style.height = nh+'px';
+  };
+  const end = () => {
+    resizing = false;
+    document.body.style.userSelect = '';
+    el.querySelectorAll('iframe').forEach(f => f.style.pointerEvents = '');
+  };
+  handle.addEventListener('mousedown', start);
+  handle.addEventListener('touchstart', start, {passive:true});
+  document.addEventListener('mousemove', move);
+  document.addEventListener('touchmove', move, {passive:false});
+  document.addEventListener('mouseup', end);
+  document.addEventListener('touchend', end);
+}
+
+// ============= タスクバー =============
+function rebuildTaskbar(){
+  const bar = $('#taskbar-apps');
+  bar.innerHTML = '';
+  state.windows.forEach((w, id) => {
+    const item = document.createElement('div');
+    item.className = 'task-item' + (state.focused === id && !w.minimized ? ' active' : '');
+    item.innerHTML = `${makeAppIcon(w.app, 16)}<span class="lbl">${w.app.name}</span>`;
+    item.addEventListener('click', () => {
+      if (w.minimized) restoreWindow(id);
+      else if (state.focused === id) minimizeWindow(id);
+      else focusWindow(id);
+    });
+    bar.appendChild(item);
+  });
+}
+
+// ============= 時計 =============
+function updateClock(){
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  $('#clock-time').textContent = `${hh}:${mm}`;
+  const days = ['日','月','火','水','木','金','土'];
+  $('#clock-date').textContent = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} (${days[now.getDay()]})`;
+}
+
+// ============= イベントバインド =============
+function bindGlobalEvents(){
+  $('#start-btn').addEventListener('click', e => { e.stopPropagation(); toggleStartMenu(); });
+  $('#sm-search-input').addEventListener('input', e => buildStartMenu(e.target.value));
+  $('#sm-search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter'){
+      const first = $('#sm-grid .sm-app');
+      if (first) first.click();
+    }
+  });
+  $('#sm-power').addEventListener('click', () => {
+    if (confirm('MinOSをシャットダウンしますか？')){
+      document.body.innerHTML = '<div style="position:fixed;inset:0;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;font-size:14px">電源が切れました。リロードで再起動します。</div>';
+    }
+  });
+
+  $('#show-desktop-btn').addEventListener('click', () => {
+    const anyVisible = [...state.windows.values()].some(w => !w.minimized);
+    state.windows.forEach((w, id) => {
+      if (anyVisible) minimizeWindow(id);
+      else restoreWindow(id);
+    });
+  });
+
+  $('#fullscreen-btn').addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+
+  $('#clock').addEventListener('click', () => openApp('about'));
+
+  // メニュー外クリックで閉じる
+  document.addEventListener('click', e => {
+    const sm = $('#start-menu');
+    if (sm.classList.contains('show') && !sm.contains(e.target) && !$('#start-btn').contains(e.target)){
+      toggleStartMenu(false);
+    }
+    $('#ctx-menu').classList.remove('show');
+  });
+
+  // ESCでスタートメニュー
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') toggleStartMenu(false);
+    if (e.key === 'Meta' || (e.ctrlKey && e.key === ' ')){
+      e.preventDefault();
+      toggleStartMenu();
+    }
+  });
+
+  // 右クリックメニュー（デスクトップ上のみ）
+  $('#desktop').addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const m = $('#ctx-menu');
+    m.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px';
+    m.style.top  = Math.min(e.clientY, window.innerHeight - 200) + 'px';
+    m.classList.add('show');
+  });
+  $('#ctx-menu').addEventListener('click', e => {
+    const act = e.target.closest('.ctx-item')?.dataset.action;
+    if (act === 'refresh') location.reload();
+    if (act === 'newwin') openApp('browser', {forceNew:true});
+    if (act === 'about') openApp('about');
+    $('#ctx-menu').classList.remove('show');
+  });
+
+  // ウィンドウサイズ変更
+  window.addEventListener('resize', () => {
+    state.windows.forEach(w => {
+      if (w.maximized) return;
+      const x = parseInt(w.el.style.left);
+      const y = parseInt(w.el.style.top);
+      if (x + 80 > window.innerWidth) w.el.style.left = (window.innerWidth - 80) + 'px';
+      if (y > window.innerHeight - 80) w.el.style.top = (window.innerHeight - 80) + 'px';
+    });
+  });
+}
+
+// ============= 起動 =============
+function boot(){
+  buildDesktop();
+  buildStartMenu();
+  bindGlobalEvents();
+  updateClock();
+  setInterval(updateClock, 1000 * 15);
+  // ブート画面を隠す
+  setTimeout(() => {
+    $('#boot').classList.add('hide');
+    setTimeout(() => $('#boot').remove(), 600);
+  }, 1100);
+}
+
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>
