@@ -397,6 +397,114 @@ app.get("/api/trending", async (req, res) => {
 });
 
 
+// ──────────────────────────────────────────────────────────────────────────
+// v1.3.3: 検索高速化 — Study2525 (2525) を並列バックエンドとして再導入
+//  - youtube-search-api と Study2525 (Invidious 互換) に対して同時にリクエスト
+//  - 先に返って来た方を Promise.race で即時レスポンス（体感速度を最大化）
+//  - 後発の結果はバックグラウンドでマージしキャッシュに蓄積
+//  - どちらか片方が落ちていても継続動作（耐障害性）
+// ──────────────────────────────────────────────────────────────────────────
+const STUDY2525_BASES = [
+  'https://study2525.glitch.me',
+  'https://yt.chocolatemoo53.com'
+];
+
+// Study2525 / Invidious 互換 API のレスポンスを yts 形式に正規化
+function normalizeStudy2525Items(data) {
+  if (!Array.isArray(data)) return [];
+  return data.map(it => {
+    if (!it) return null;
+    const type = it.type || (it.videoId ? 'video' : it.playlistId ? 'playlist' : it.authorId ? 'channel' : null);
+    if (type === 'video' && it.videoId) {
+      const thumbs = Array.isArray(it.videoThumbnails) && it.videoThumbnails.length
+        ? it.videoThumbnails
+        : [{ url: `https://i.ytimg.com/vi/${it.videoId}/mqdefault.jpg` }];
+      const lenSec = Number(it.lengthSeconds) || 0;
+      const lengthText = lenSec > 0
+        ? `${Math.floor(lenSec / 60)}:${String(lenSec % 60).padStart(2, '0')}`
+        : '';
+      return {
+        id: it.videoId,
+        type: 'video',
+        title: it.title || '',
+        channelTitle: it.author || '',
+        channelId: it.authorId || '',
+        author: { name: it.author || '', channelId: it.authorId || '' },
+        thumbnail: { thumbnails: thumbs },
+        length: { simpleText: lengthText },
+        lengthText,
+        viewCount: it.viewCount || 0,
+        viewCountText: it.viewCount
+          ? `${Number(it.viewCount).toLocaleString()} 回視聴`
+          : '',
+        publishedTimeText: it.publishedText || '',
+        _source: 'study2525'
+      };
+    }
+    if (type === 'channel' && it.authorId) {
+      return {
+        id: it.authorId,
+        type: 'channel',
+        title: it.author || '',
+        channelTitle: it.author || '',
+        thumbnail: { thumbnails: it.authorThumbnails || [] },
+        subCount: it.subCount || 0,
+        subCountText: it.subCountText || '',
+        videoCount: it.videoCount || 0,
+        description: it.description || '',
+        _source: 'study2525'
+      };
+    }
+    if (type === 'playlist' && it.playlistId) {
+      return {
+        id: it.playlistId,
+        type: 'playlist',
+        title: it.title || '',
+        channelTitle: it.author || '',
+        channelId: it.authorId || '',
+        thumbnail: { thumbnails: it.playlistThumbnail ? [{ url: it.playlistThumbnail }] : [] },
+        videoCount: it.videoCount || 0,
+        length: it.videoCount || 0,
+        _source: 'study2525'
+      };
+    }
+    return null;
+  }).filter(Boolean);
+}
+
+// Study2525 で検索（複数ミラーをフォールバック付きで試す）
+async function searchViaStudy2525(query, page = 0, timeoutMs = 3500) {
+  for (const base of STUDY2525_BASES) {
+    try {
+      const url = `${base}/api/v1/search?q=${encodeURIComponent(query)}&page=${parseInt(page) + 1}`;
+      const r = await fetchWithTimeout(url, { headers: { 'User-Agent': 'Mozilla/5.0 MIN-Tube-Slim/1.3.3' } }, timeoutMs);
+      if (!r.ok) continue;
+      const data = await r.json().catch(() => null);
+      const items = normalizeStudy2525Items(data);
+      if (items.length) return items;
+    } catch (e) { /* 次のミラーへ */ }
+  }
+  return [];
+}
+
+// 2 ソースを id + type で重複排除しつつマージ
+function mergeSearchResults(primary, secondary) {
+  const seen = new Set();
+  const out = [];
+  for (const list of [primary, secondary]) {
+    for (const it of list) {
+      if (!it) continue;
+      const id = (typeof it.id === 'string') ? it.id : (it.id && it.id.videoId) || '';
+      if (!id) continue;
+      const key = (it.type || 'video') + ':' + id;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(it);
+    }
+  }
+  return out;
+}
+
 app.get("/api/search", async (req, res, next) => {
   const query = req.query.q;
   const page = parseInt(req.query.page) || 0;
@@ -414,20 +522,60 @@ app.get("/api/search", async (req, res, next) => {
   cacheStats.miss++;
 
   try {
-    // メインは youtube-search-api のみ。withPlaylist=true で playlist 型もそのまま含めて取得。
-    // 読み込みを最大限高速化するため、外部バックエンドへのフォローアップ問い合わせは行わない。
-    const ytsRes = await yts.GetListByKeyword(query, true, 25, page);
-    const items = (ytsRes && ytsRes.items) || [];
+    // === 並列リクエスト ===
+    // yts (メイン: 高品質だがやや低速) と Study2525 (2525: 軽量・キャッシュ済みで高速) を同時起動
+    const ytsPromise = yts.GetListByKeyword(query, true, 25, page)
+      .then(r => ({ source: 'yts', items: (r && r.items) || [], nextPage: r ? r.nextPage : null }))
+      .catch(() => ({ source: 'yts', items: [], nextPage: null }));
 
-    // チャンネル画像を videoRenderer から補完（キャッシュ有り・タイムアウト短め）
+    // Study2525 は page 0 でのみ並列起動 (ページネーションは yts に統一して整合性を保つ)
+    const s2525Promise = page === 0
+      ? searchViaStudy2525(query, page, 3500).then(items => ({ source: 'study2525', items, nextPage: null }))
+      : Promise.resolve({ source: 'study2525', items: [], nextPage: null });
+
+    // どちらか早い方を採用するための race。ただし「空配列で勝つ」のは避ける
+    const raceWithMinItems = (promises, minItems = 1) =>
+      new Promise((resolve) => {
+        let pending = promises.length;
+        let fallback = null;
+        promises.forEach(p => p.then(v => {
+          if (v && v.items && v.items.length >= minItems) {
+            resolve(v);
+          } else {
+            fallback = fallback || v;
+            if (--pending === 0) resolve(fallback || { items: [], nextPage: null });
+          }
+        }).catch(() => {
+          if (--pending === 0) resolve(fallback || { items: [], nextPage: null });
+        }));
+      });
+
+    const winner = await raceWithMinItems([ytsPromise, s2525Promise], 5);
+
+    // 勝者の結果を即時レスポンス（高速化のキモ）
+    let items = winner.items;
+    let nextPage = winner.nextPage;
+
+    // チャンネル画像補完（タイムアウト短め・失敗は無視）
     try { await enrichItemsWithChannelMeta(items, query); } catch (e) {}
 
-    const payload = { items, nextPage: ytsRes ? ytsRes.nextPage : null };
-    // 5 分キャッシュ
-    await cacheSet(cacheKey, payload, 5 * 60 * 1000);
+    const payload = { items, nextPage };
     res.setHeader('X-Cache', 'MISS');
+    res.setHeader('X-Source', winner.source || 'unknown');
     res.setHeader('Cache-Control', 'public, max-age=60');
     res.json(payload);
+
+    // === バックグラウンドで遅れたソースをマージしてキャッシュ更新 ===
+    // 同一クエリの次回アクセスはより豊富なデータでヒットさせる
+    Promise.allSettled([ytsPromise, s2525Promise]).then(async (settled) => {
+      const ytsItems = settled[0].status === 'fulfilled' ? (settled[0].value.items || []) : [];
+      const s2525Items = settled[1].status === 'fulfilled' ? (settled[1].value.items || []) : [];
+      const finalNext = settled[0].status === 'fulfilled' ? settled[0].value.nextPage : null;
+      // yts を優先（メタデータが豊富なため）、Study2525 を補完として後ろに付ける
+      const merged = mergeSearchResults(ytsItems, s2525Items);
+      try { await enrichItemsWithChannelMeta(merged, query); } catch (e) {}
+      await cacheSet(cacheKey, { items: merged, nextPage: finalNext }, 5 * 60 * 1000);
+    });
   } catch (err) { next(err); }
 });
 
