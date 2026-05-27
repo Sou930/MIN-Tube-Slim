@@ -921,12 +921,42 @@ const shortsHtml = `
         .swipe-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.6); padding: 12px 20px; border-radius: 30px; display: flex; align-items: center; gap: 10px; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.5s; border: 1px solid rgba(255,255,255,0.2); }
         .swipe-hint.show { opacity: 1; animation: bounce 2s infinite; }
         @keyframes bounce { 0%, 100% { transform: translate(-50%, -50%); } 50% { transform: translate(-50%, -60%); } }
-        .comments-panel { position: absolute; bottom: 0; left: 0; width: 100%; height: 70%; background: #181818; border-radius: 16px 16px 0 0; z-index: 40; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
+        .comments-panel { position: absolute; bottom: 0; left: 0; width: 100%; height: 75%; background: #181818; border-radius: 16px 16px 0 0; z-index: 40; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
         .comments-panel.open { transform: translateY(0); }
-        .comments-header { padding: 16px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-        .comments-body { flex: 1; overflow-y: auto; padding: 16px; }
+        .comments-header { padding: 14px 16px; border-bottom: 1px solid #303030; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .comments-header h3 { margin: 0; font-size: 16px; font-weight: 600; }
+        .comments-header .count { color: #aaa; font-size: 13px; margin-left: 6px; font-weight: 400; }
+        .comments-body { flex: 1; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
+        .comments-body::-webkit-scrollbar { width: 4px; }
+        .comments-body::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
         .comment-item { display: flex; gap: 12px; margin-bottom: 18px; }
-        .comment-avatar { width: 32px; height: 32px; border-radius: 50%; }
+        .comment-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; background: #333; object-fit: cover; }
+        .comment-body { flex: 1; min-width: 0; }
+        .comment-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 2px; }
+        .comment-author { font-size: 12px; color: #aaa; font-weight: 600; }
+        .comment-author.is-creator { background: linear-gradient(90deg,#3ea6ff,#ff0080); color:#0f0f0f; padding: 1px 7px; border-radius: 10px; font-weight: 700; }
+        .comment-time { font-size: 11px; color: #888; }
+        .comment-pinned { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: #aaa; margin-bottom: 2px; }
+        .comment-pinned i { font-size: 10px; }
+        .comment-content { font-size: 14px; line-height: 1.4; word-wrap: break-word; white-space: pre-wrap; color: #fff; }
+        .comment-actions { display: flex; align-items: center; gap: 4px; margin-top: 6px; }
+        .comment-action-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 14px; background: transparent; border: none; color: #aaa; cursor: pointer; font-size: 11px; transition: background 0.15s; }
+        .comment-action-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .comment-action-btn.active { color: #3ea6ff; }
+        .comment-action-btn i { font-size: 13px; }
+        .replies-toggle { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 6px 12px; border-radius: 14px; background: transparent; color: #3ea6ff; border: none; cursor: pointer; font-size: 12px; font-weight: 500; }
+        .replies-toggle:hover { background: rgba(62,166,255,0.12); }
+        .replies-toggle i { font-size: 10px; transition: transform 0.2s; }
+        .replies-toggle.open i { transform: rotate(180deg); }
+        .replies-container { margin-top: 10px; padding-left: 4px; display: none; flex-direction: column; gap: 12px; }
+        .replies-container.open { display: flex; }
+        .reply-item { display: flex; gap: 10px; }
+        .reply-avatar { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; background: #333; object-fit: cover; }
+        .reply-loading { color: #888; font-size: 12px; display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+        .reply-loading .mini-spinner { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.15); border-top-color: #3ea6ff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .comments-empty { text-align: center; color: #888; padding: 40px 16px; font-size: 14px; }
+        .comments-empty i { font-size: 32px; margin-bottom: 10px; display: block; }
         .top-nav { position: absolute; top: 16px; left: 16px; z-index: 35; display: flex; align-items: center; color: white; text-decoration: none; }
         .top-nav i { font-size: 20px; filter: drop-shadow(0 0 4px rgba(0,0,0,0.5)); }
         .loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 1; transition: 0.3s; }
@@ -957,10 +987,11 @@ const shortsHtml = `
                 <div class="video-title">${videoData.videoTitle}</div>
             </div>
             <div id="commentsPanel" class="comments-panel">
-                <div class="comments-header"><h3 style="margin:0; font-size:16px;">コメント</h3><i class="fas fa-times" style="cursor:pointer;" onclick="toggleComments()"></i></div>
-                <div class="comments-body">
-                    ${commentsData.comments.length > 0 ? commentsData.comments.map(c => `<div class="comment-item"><img class="comment-avatar" src="${c.authorThumbnails?.[0]?.url || 'https://via.placeholder.com/32'}"><div><div style="font-size:12px; color:#aaa; font-weight:bold;">${c.author}</div><div style="font-size:14px; margin-top:2px;">${c.content}</div></div></div>`).join('') : '<p style="text-align:center; color:#888;">コメントはありません</p>'}
+                <div class="comments-header">
+                    <h3>コメント<span class="count" id="shortsCommentCount">${commentsData.commentCount || 0}</span></h3>
+                    <i class="fas fa-times" style="cursor:pointer; font-size:18px; padding:4px;" onclick="toggleComments()"></i>
                 </div>
+                <div class="comments-body" id="shortsCommentsBody"></div>
             </div>
         </div>
     </div>
@@ -1041,7 +1072,178 @@ const shortsHtml = `
             setTimeout(() => { swipeHint.classList.remove('show'); }, 300);
         };
 
-        function toggleComments() { commentsPanel.classList.toggle('open'); }
+        /* ===== コメントレンダリング (Shorts) ===== */
+        const __SHORTS_COMMENTS_DATA = ${JSON.stringify(commentsData || { commentCount: 0, comments: [] })};
+        const __SHORTS_VIDEO_ID = ${JSON.stringify(videoId)};
+        let __shortsCommentsRendered = false;
+
+        function shortsEscapeHtml(s) {
+            if (s == null) return '';
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+        function shortsLinkify(text) {
+            const esc = shortsEscapeHtml(text);
+            return esc.replace(/(https?:\\/\\/[^\\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:#3ea6ff;">$1</a>');
+        }
+        function shortsRelativeTime(c) {
+            const text = c.publishedText || c.published_text || '';
+            if (text) {
+                const map = [
+                    [/^(\\d+)\\s*seconds?\\s*ago/i, '$1秒前'],
+                    [/^(\\d+)\\s*minutes?\\s*ago/i, '$1分前'],
+                    [/^(\\d+)\\s*hours?\\s*ago/i, '$1時間前'],
+                    [/^(\\d+)\\s*days?\\s*ago/i, '$1日前'],
+                    [/^(\\d+)\\s*weeks?\\s*ago/i, '$1週間前'],
+                    [/^(\\d+)\\s*months?\\s*ago/i, '$1か月前'],
+                    [/^(\\d+)\\s*years?\\s*ago/i, '$1年前'],
+                    [/\\(edited\\)/i, '(編集済み)'],
+                ];
+                let out = text;
+                for (const [re, rep] of map) out = out.replace(re, rep);
+                return out;
+            }
+            const ts = c.published || c.publishedTime;
+            if (typeof ts === 'number') {
+                const diff = Math.floor(Date.now()/1000) - ts;
+                if (diff < 60) return diff + '秒前';
+                if (diff < 3600) return Math.floor(diff/60) + '分前';
+                if (diff < 86400) return Math.floor(diff/3600) + '時間前';
+                if (diff < 86400*7) return Math.floor(diff/86400) + '日前';
+                if (diff < 86400*30) return Math.floor(diff/(86400*7)) + '週間前';
+                if (diff < 86400*365) return Math.floor(diff/(86400*30)) + 'か月前';
+                return Math.floor(diff/(86400*365)) + '年前';
+            }
+            return '';
+        }
+        function shortsFormatLike(n) {
+            if (!n || isNaN(n)) return '';
+            if (n < 1000) return String(n);
+            if (n < 10000) return (n/1000).toFixed(1).replace(/\\.0$/,'') + '千';
+            if (n < 100000000) return (n/10000).toFixed(1).replace(/\\.0$/,'') + '万';
+            return (n/100000000).toFixed(1).replace(/\\.0$/,'') + '億';
+        }
+        function shortsAvatar(c, size) {
+            size = size || 32;
+            const t = c && c.authorThumbnails;
+            if (Array.isArray(t) && t.length > 0) {
+                const sorted = t.slice().sort((a,b)=>Math.abs((a.width||0)-size)-Math.abs((b.width||0)-size));
+                return sorted[0].url || '';
+            }
+            return 'https://ui-avatars.com/api/?name=' + encodeURIComponent((c&&c.author)||'U') + '&background=555&color=fff&size=64&bold=true';
+        }
+        function shortsRenderComment(c, isReply) {
+            const avatar = shortsAvatar(c, isReply ? 22 : 32);
+            const authorCls = c.authorIsChannelOwner ? 'comment-author is-creator' : 'comment-author';
+            const time = shortsRelativeTime(c);
+            const likes = shortsFormatLike(c.likeCount);
+            const replyCount = (c.replies && (c.replies.replyCount || c.replies.commentCount)) || 0;
+            const continuation = c.replies && c.replies.continuation;
+            const commentId = c.commentId || c.id || (Math.random().toString(36).slice(2));
+            const isPinned = !!c.isPinned;
+            const creatorHeart = c.creatorHeart && (c.creatorHeart.creatorThumbnail || c.creatorHeart.creatorName);
+
+            let h = '';
+            if (isReply) {
+                h += '<div class="reply-item">';
+                h += '<img class="reply-avatar" src="' + shortsEscapeHtml(avatar) + '" loading="lazy">';
+                h += '<div class="comment-body">';
+            } else {
+                h += '<div class="comment-item" data-comment-id="' + shortsEscapeHtml(commentId) + '">';
+                h += '<img class="comment-avatar" src="' + shortsEscapeHtml(avatar) + '" loading="lazy">';
+                h += '<div class="comment-body">';
+                if (isPinned) h += '<div class="comment-pinned"><i class="fas fa-thumbtack"></i> 固定されたコメント</div>';
+            }
+            h += '<div class="comment-meta">';
+            h += '<span class="' + authorCls + '">' + shortsEscapeHtml(c.author || '匿名') + '</span>';
+            if (time) h += '<span class="comment-time">' + shortsEscapeHtml(time) + '</span>';
+            h += '</div>';
+            h += '<div class="comment-content">' + shortsLinkify(c.content || '') + '</div>';
+            h += '<div class="comment-actions">';
+            h += '<button class="comment-action-btn" onclick="shortsToggleLike(this)"><i class="far fa-thumbs-up"></i><span>' + shortsEscapeHtml(likes) + '</span></button>';
+            h += '<button class="comment-action-btn" onclick="shortsToggleLike(this, true)"><i class="far fa-thumbs-down"></i></button>';
+            if (creatorHeart) {
+                h += '<span class="comment-action-btn" title="クリエイターのハート"><i class="fas fa-heart" style="color:#ff0033;"></i></span>';
+            }
+            h += '</div>';
+            if (!isReply && replyCount > 0) {
+                h += '<button class="replies-toggle" onclick="shortsToggleReplies(this, \\'' + shortsEscapeHtml(commentId) + '\\', ' + JSON.stringify(continuation || '') + ')">';
+                h += '<i class="fas fa-chevron-down"></i><span>返信 ' + replyCount + ' 件</span>';
+                h += '</button>';
+                h += '<div class="replies-container" data-loaded="0"></div>';
+            }
+            h += '</div></div>';
+            return h;
+        }
+        function shortsRenderComments() {
+            if (__shortsCommentsRendered) return;
+            __shortsCommentsRendered = true;
+            const body = document.getElementById('shortsCommentsBody');
+            if (!body) return;
+            const data = __SHORTS_COMMENTS_DATA;
+            if (!data.comments || data.comments.length === 0) {
+                body.innerHTML = '<div class="comments-empty"><i class="far fa-comment"></i>コメントはまだありません</div>';
+                return;
+            }
+            const sorted = data.comments.slice().sort((a,b) => {
+                if (!!b.isPinned !== !!a.isPinned) return b.isPinned ? 1 : -1;
+                return (b.likeCount || 0) - (a.likeCount || 0);
+            });
+            body.innerHTML = sorted.map(c => shortsRenderComment(c, false)).join('');
+            const cntEl = document.getElementById('shortsCommentCount');
+            if (cntEl) {
+                const cnt = data.commentCount || data.comments.length;
+                cntEl.textContent = (typeof cnt === 'number') ? cnt.toLocaleString() : cnt;
+            }
+        }
+        function shortsToggleLike(btn, isDown) {
+            const icon = btn.querySelector('i');
+            const active = btn.classList.toggle('active');
+            if (icon) {
+                if (active) { icon.classList.remove('far'); icon.classList.add('fas'); }
+                else { icon.classList.remove('fas'); icon.classList.add('far'); }
+            }
+        }
+        async function shortsToggleReplies(btn, commentId, continuation) {
+            const container = btn.parentElement.querySelector('.replies-container');
+            if (!container) return;
+            const isOpen = container.classList.contains('open');
+            if (isOpen) {
+                container.classList.remove('open');
+                btn.classList.remove('open');
+                return;
+            }
+            container.classList.add('open');
+            btn.classList.add('open');
+            if (container.dataset.loaded === '1') return;
+            const myComment = (__SHORTS_COMMENTS_DATA.comments || []).find(x => (x.commentId || x.id) === commentId);
+            if (myComment && myComment.replies && Array.isArray(myComment.replies.replies) && myComment.replies.replies.length > 0) {
+                container.innerHTML = myComment.replies.replies.map(r => shortsRenderComment(r, true)).join('');
+                container.dataset.loaded = '1';
+                return;
+            }
+            if (!continuation) {
+                container.innerHTML = '<div class="reply-loading">返信を取得できません</div>';
+                container.dataset.loaded = '1';
+                return;
+            }
+            container.innerHTML = '<div class="reply-loading"><div class="mini-spinner"></div>読み込み中...</div>';
+            try {
+                const r = await fetch('/api/comments-reply/' + __SHORTS_VIDEO_ID + '?continuation=' + encodeURIComponent(continuation));
+                if (!r.ok) throw new Error('failed');
+                const data = await r.json();
+                const replies = data.comments || [];
+                if (replies.length === 0) container.innerHTML = '<div class="reply-loading">返信はありません</div>';
+                else container.innerHTML = replies.map(r => shortsRenderComment(r, true)).join('');
+            } catch (e) {
+                container.innerHTML = '<div class="reply-loading" style="color:#ff6b6b;">読み込み失敗</div>';
+            }
+            container.dataset.loaded = '1';
+        }
+
+        function toggleComments() {
+            commentsPanel.classList.toggle('open');
+            if (commentsPanel.classList.contains('open')) shortsRenderComments();
+        }
         // チャンネル登録機能（ショート）
         const SHORT_CHANNEL = "${videoData.channelName || ''}";
         const SHORT_SUB_KEY = 'subscribed_' + SHORT_CHANNEL;
@@ -1134,9 +1336,44 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
         .description-content { max-height: 60px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; margin-top: 8px; line-height: 1.5; }
         .description-box.expanded .description-content { max-height: none; -webkit-line-clamp: unset; display: block; }
         .description-show-more { font-weight: bold; margin-top: 8px; font-size: 14px; }
-        .comment-item { display: flex; gap: 16px; margin-bottom: 20px; }
-        .comment-avatar { width: 40px; height: 40px; border-radius: 50%; }
-        .comment-author { font-weight: bold; font-size: 13px; margin-bottom: 4px; display: block; }
+        /* === コメントセクション === */
+        .comments-section { margin-top: 24px; }
+        .comments-section h3 { font-size: 18px; font-weight: 600; margin: 0 0 16px; display: flex; align-items: center; gap: 16px; }
+        .comments-toolbar { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; font-size: 14px; color: var(--text-sub); }
+        .comments-sort { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; padding: 6px 10px; border-radius: 18px; transition: background 0.15s; user-select: none; }
+        .comments-sort:hover { background: var(--bg-secondary); color: var(--text-main); }
+        .comments-sort i { font-size: 12px; }
+        .comments-list { display: flex; flex-direction: column; }
+        .comment-item { display: flex; gap: 14px; margin-bottom: 20px; }
+        .comment-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; background: #333; object-fit: cover; }
+        .comment-body { flex: 1; min-width: 0; }
+        .comment-meta-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+        .comment-author { font-weight: 500; font-size: 13px; color: var(--text-main); }
+        .comment-author.is-creator { background: linear-gradient(90deg,#3ea6ff,#ff0080); color:#0f0f0f; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+        .comment-time { font-size: 12px; color: var(--text-sub); }
+        .comment-pinned { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
+        .comment-pinned i { font-size: 11px; }
+        .comment-content { font-size: 14px; line-height: 1.45; color: var(--text-main); word-wrap: break-word; white-space: pre-wrap; }
+        .comment-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--text-sub); }
+        .comment-action-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 18px; cursor: pointer; user-select: none; transition: background 0.15s; background: transparent; border: none; color: var(--text-sub); font-size: 12px; }
+        .comment-action-btn:hover { background: var(--bg-secondary); color: var(--text-main); }
+        .comment-action-btn.active { color: #3ea6ff; }
+        .comment-action-btn i { font-size: 14px; }
+        .comment-likes { font-size: 12px; color: var(--text-sub); min-width: 12px; }
+        .comment-creator-heart { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #ff0033; color: #fff; font-size: 10px; margin-left: -10px; margin-top: 14px; align-self: flex-start; }
+        .replies-toggle { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; padding: 8px 14px; border-radius: 18px; background: transparent; color: #3ea6ff; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: background 0.15s; }
+        .replies-toggle:hover { background: rgba(62,166,255,0.12); }
+        .replies-toggle i { font-size: 11px; transition: transform 0.2s; }
+        .replies-toggle.open i { transform: rotate(180deg); }
+        .replies-container { margin-top: 12px; padding-left: 4px; display: none; flex-direction: column; gap: 16px; }
+        .replies-container.open { display: flex; }
+        .reply-item { display: flex; gap: 12px; }
+        .reply-avatar { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; background: #333; object-fit: cover; }
+        .reply-loading { padding: 8px 0; color: var(--text-sub); font-size: 13px; display: flex; align-items: center; gap: 8px; }
+        .reply-loading .mini-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.15); border-top-color: #3ea6ff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .comments-empty { text-align: center; color: var(--text-sub); padding: 32px 0; font-size: 14px; }
+        .comments-load-more { background: transparent; color: #3ea6ff; border: 1px solid #3ea6ff; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 500; margin: 12px auto; display: block; transition: background 0.15s; }
+        .comments-load-more:hover { background: rgba(62,166,255,0.12); }
         .rec-item { display: flex; gap: 8px; margin-bottom: 12px; cursor: pointer; text-decoration: none; color: inherit; }
         .rec-thumb { width: 160px; height: 90px; flex-shrink: 0; border-radius: 8px; overflow: hidden; background: #222; }
         .rec-thumb img { width: 100%; height: 100%; object-fit: cover; }
@@ -1306,8 +1543,16 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
             <div class="description-show-more" id="descriptionToggleBtn">全文を表示</div>
         </div>
         <div class="comments-section">
-            <h3>コメント ${commentsData.commentCount} 件</h3>
-            ${commentsData.comments.map(c => `<div class="comment-item"><img class="comment-avatar" src="${c.authorThumbnails?.[0]?.url || ''}"><div><span class="comment-author">${c.author}</span><div style="font-size:14px;">${c.content}</div></div></div>`).join('')}
+            <h3>
+                <span>コメント <span id="commentCountLabel">${commentsData.commentCount || 0}</span> 件</span>
+            </h3>
+            <div class="comments-toolbar">
+                <div class="comments-sort" id="commentsSortBtn" onclick="toggleCommentSort()">
+                    <i class="fas fa-sort"></i>
+                    <span id="commentsSortLabel">人気順</span>
+                </div>
+            </div>
+            <div id="commentsList" class="comments-list"></div>
         </div>
     </div>
     <div class="sidebar">
@@ -1430,6 +1675,224 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
         } catch (error) { console.error(error); } finally { overlay.classList.remove('active'); }
     }
 
+    /* ======================================================
+     * コメントレンダリング
+     * ====================================================== */
+    const __COMMENTS_DATA = ${JSON.stringify(commentsData || { commentCount: 0, comments: [] })};
+    const __VIDEO_ID_FOR_COMMENTS = ${JSON.stringify(videoId)};
+    let __commentSortMode = 'top'; // 'top' or 'new'
+
+    function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+    function linkifyText(text) {
+        // 改行は white-space:pre-wrap で表現するので、URLだけリンク化
+        const escaped = escapeHtml(text);
+        return escaped.replace(/(https?:\\/\\/[^\\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:#3ea6ff;">$1</a>');
+    }
+    function formatRelativeTime(c) {
+        // Invidious 系: published(秒) と publishedText("3 days ago" など)
+        // 既に publishedText があればそれを優先して日本語化
+        const text = c.publishedText || c.published_text || '';
+        if (text) {
+            // 英語表現を日本語に変換
+            const map = [
+                [/^(\\d+)\\s*seconds?\\s*ago/i, '$1秒前'],
+                [/^(\\d+)\\s*minutes?\\s*ago/i, '$1分前'],
+                [/^(\\d+)\\s*hours?\\s*ago/i, '$1時間前'],
+                [/^(\\d+)\\s*days?\\s*ago/i, '$1日前'],
+                [/^(\\d+)\\s*weeks?\\s*ago/i, '$1週間前'],
+                [/^(\\d+)\\s*months?\\s*ago/i, '$1か月前'],
+                [/^(\\d+)\\s*years?\\s*ago/i, '$1年前'],
+                [/\\(edited\\)/i, '(編集済み)'],
+            ];
+            let out = text;
+            for (const [re, rep] of map) out = out.replace(re, rep);
+            return out;
+        }
+        // published (unix秒) から計算
+        const ts = c.published || c.publishedTime || c.publishedTimeText;
+        if (typeof ts === 'number') {
+            const diff = Math.floor(Date.now() / 1000) - ts;
+            if (diff < 60) return diff + '秒前';
+            if (diff < 3600) return Math.floor(diff / 60) + '分前';
+            if (diff < 86400) return Math.floor(diff / 3600) + '時間前';
+            if (diff < 86400 * 7) return Math.floor(diff / 86400) + '日前';
+            if (diff < 86400 * 30) return Math.floor(diff / (86400 * 7)) + '週間前';
+            if (diff < 86400 * 365) return Math.floor(diff / (86400 * 30)) + 'か月前';
+            return Math.floor(diff / (86400 * 365)) + '年前';
+        }
+        return '';
+    }
+    function formatLikeCount(n) {
+        if (n == null || n === 0 || isNaN(n)) return '';
+        if (n < 1000) return String(n);
+        if (n < 10000) return (n / 1000).toFixed(1).replace(/\\.0$/, '') + '千';
+        if (n < 100000000) return (n / 10000).toFixed(1).replace(/\\.0$/, '') + '万';
+        return (n / 100000000).toFixed(1).replace(/\\.0$/, '') + '億';
+    }
+    function getAvatarUrl(c, size) {
+        size = size || 40;
+        const t = c && c.authorThumbnails;
+        if (Array.isArray(t) && t.length > 0) {
+            // 一番近いサイズを選ぶ
+            const sorted = t.slice().sort((a, b) => Math.abs((a.width || 0) - size) - Math.abs((b.width || 0) - size));
+            return sorted[0].url || '';
+        }
+        const name = (c && c.author) || 'U';
+        return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(name) + '&background=555&color=fff&size=' + (size * 2) + '&bold=true';
+    }
+    function renderCommentItem(c, isReply) {
+        const avatar = getAvatarUrl(c, isReply ? 24 : 40);
+        const authorClass = c.authorIsChannelOwner ? 'comment-author is-creator' : 'comment-author';
+        const time = formatRelativeTime(c);
+        const likes = formatLikeCount(c.likeCount);
+        const replyCount = (c.replies && (c.replies.replyCount || c.replies.commentCount)) || 0;
+        const continuation = c.replies && c.replies.continuation;
+        const commentId = c.commentId || c.id || (Math.random().toString(36).slice(2));
+        const isPinned = !!c.isPinned;
+        const creatorHeart = c.creatorHeart && (c.creatorHeart.creatorThumbnail || c.creatorHeart.creatorName);
+
+        let html = '';
+        if (isReply) {
+            html += '<div class="reply-item">';
+            html += '<img class="reply-avatar" src="' + escapeHtml(avatar) + '" loading="lazy" onerror="this.src=\\'https://ui-avatars.com/api/?name=U&background=555&color=fff&size=48\\'">';
+            html += '<div class="comment-body">';
+        } else {
+            html += '<div class="comment-item" data-comment-id="' + escapeHtml(commentId) + '">';
+            html += '<img class="comment-avatar" src="' + escapeHtml(avatar) + '" loading="lazy" onerror="this.src=\\'https://ui-avatars.com/api/?name=U&background=555&color=fff&size=80\\'">';
+            html += '<div class="comment-body">';
+            if (isPinned) {
+                html += '<div class="comment-pinned"><i class="fas fa-thumbtack"></i> 固定されたコメント</div>';
+            }
+        }
+        html += '<div class="comment-meta-row">';
+        html += '<span class="' + authorClass + '">' + escapeHtml(c.author || '匿名') + '</span>';
+        if (time) html += '<span class="comment-time">' + escapeHtml(time) + '</span>';
+        html += '</div>';
+        html += '<div class="comment-content">' + linkifyText(c.content || '') + '</div>';
+        html += '<div class="comment-actions">';
+        html += '<button class="comment-action-btn" onclick="toggleCommentLike(this)" title="高評価"><i class="far fa-thumbs-up"></i><span class="comment-likes">' + escapeHtml(likes) + '</span></button>';
+        html += '<button class="comment-action-btn" onclick="toggleCommentLike(this, true)" title="低評価"><i class="far fa-thumbs-down"></i></button>';
+        if (creatorHeart) {
+            const heartImg = c.creatorHeart.creatorThumbnail || '';
+            html += '<span class="comment-action-btn" title="' + escapeHtml((c.creatorHeart.creatorName || 'クリエイター') + 'のハート') + '"><i class="fas fa-heart" style="color:#ff0033;"></i></span>';
+        }
+        html += '</div>';
+        if (!isReply && replyCount > 0) {
+            html += '<button class="replies-toggle" onclick="toggleReplies(this, \\'' + escapeHtml(commentId) + '\\', ' + JSON.stringify(continuation || '') + ')">';
+            html += '<i class="fas fa-chevron-down"></i>';
+            html += '<span>返信 ' + replyCount + ' 件</span>';
+            html += '</button>';
+            html += '<div class="replies-container" data-loaded="0"></div>';
+        }
+        html += '</div></div>'; // close .comment-body, .comment-item/.reply-item
+        return html;
+    }
+    function renderComments() {
+        const list = document.getElementById('commentsList');
+        if (!list) return;
+        const data = __COMMENTS_DATA;
+        if (!data.comments || data.comments.length === 0) {
+            list.innerHTML = '<div class="comments-empty"><i class="far fa-comment" style="font-size:32px; margin-bottom:8px; display:block;"></i>コメントはまだありません</div>';
+            return;
+        }
+        // ソート
+        const sorted = data.comments.slice();
+        if (__commentSortMode === 'new') {
+            sorted.sort((a, b) => (b.published || 0) - (a.published || 0));
+        } else {
+            // top: ピン留め最優先、その後 likeCount 降順
+            sorted.sort((a, b) => {
+                if (!!b.isPinned !== !!a.isPinned) return b.isPinned ? 1 : -1;
+                return (b.likeCount || 0) - (a.likeCount || 0);
+            });
+        }
+        list.innerHTML = sorted.map(c => renderCommentItem(c, false)).join('');
+        const countLabel = document.getElementById('commentCountLabel');
+        if (countLabel) {
+            const cnt = data.commentCount || data.comments.length;
+            countLabel.textContent = (typeof cnt === 'number') ? cnt.toLocaleString() : cnt;
+        }
+    }
+    function toggleCommentSort() {
+        __commentSortMode = (__commentSortMode === 'top') ? 'new' : 'top';
+        const label = document.getElementById('commentsSortLabel');
+        if (label) label.textContent = (__commentSortMode === 'top') ? '人気順' : '新しい順';
+        renderComments();
+    }
+    function toggleCommentLike(btn, isDown) {
+        const icon = btn.querySelector('i');
+        const active = btn.classList.toggle('active');
+        if (icon) {
+            if (active) {
+                icon.classList.remove('far');
+                icon.classList.add('fas');
+            } else {
+                icon.classList.remove('fas');
+                icon.classList.add('far');
+            }
+        }
+        // 高評価カウント表示の更新（ローカルのみ）
+        if (!isDown) {
+            const span = btn.querySelector('.comment-likes');
+            if (span) {
+                const cur = span.textContent || '';
+                // 簡易: +1 表示
+                if (active && !cur.endsWith('+')) span.textContent = (cur || '0') + ' ❤';
+                else if (!active) span.textContent = cur.replace(/ ❤$/, '');
+            }
+        }
+    }
+    async function toggleReplies(btn, commentId, continuation) {
+        const container = btn.parentElement.querySelector('.replies-container');
+        if (!container) return;
+        const isOpen = container.classList.contains('open');
+        const label = btn.querySelector('span');
+        if (isOpen) {
+            container.classList.remove('open');
+            btn.classList.remove('open');
+            if (label) label.textContent = label.textContent.replace('返信を非表示', '返信を表示');
+            return;
+        }
+        container.classList.add('open');
+        btn.classList.add('open');
+        if (container.dataset.loaded === '1') return;
+        // 取得済みの replies が data に既にあるか確認
+        const myComment = (__COMMENTS_DATA.comments || []).find(x => (x.commentId || x.id) === commentId);
+        if (myComment && myComment.replies && Array.isArray(myComment.replies.replies) && myComment.replies.replies.length > 0) {
+            container.innerHTML = myComment.replies.replies.map(r => renderCommentItem(r, true)).join('');
+            container.dataset.loaded = '1';
+            return;
+        }
+        if (!continuation) {
+            container.innerHTML = '<div class="reply-loading">返信を取得できません</div>';
+            container.dataset.loaded = '1';
+            return;
+        }
+        container.innerHTML = '<div class="reply-loading"><div class="mini-spinner"></div>返信を読み込み中...</div>';
+        try {
+            const r = await fetch('/api/comments-reply/' + __VIDEO_ID_FOR_COMMENTS + '?continuation=' + encodeURIComponent(continuation));
+            if (!r.ok) throw new Error('failed');
+            const data = await r.json();
+            const replies = data.comments || [];
+            if (replies.length === 0) {
+                container.innerHTML = '<div class="reply-loading">返信はありません</div>';
+            } else {
+                container.innerHTML = replies.map(r => renderCommentItem(r, true)).join('');
+            }
+        } catch (e) {
+            container.innerHTML = '<div class="reply-loading" style="color:#ff6b6b;">返信の取得に失敗しました</div>';
+        }
+        container.dataset.loaded = '1';
+    }
+
     // 次の動画を保存しておく（自動再生用）
     window.__nextVideo = null;
     async function loadRecommendations() {
@@ -1469,6 +1932,7 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
     }
     window.onload = () => {
         loadRecommendations();
+        renderComments();
 
         // --- 修正箇所：保存された再生方法を即座に反映 ---
         const savedMode = localStorage.getItem('playbackMode') || 'googlevideo';
@@ -2726,6 +3190,31 @@ app.get("/api/suggest", async (req, res) => {
     res.json({ query: q, suggestions });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch suggestions", message: err.message });
+  }
+});
+
+// コメント返信取得 (Invidious continuation 経由)
+app.get("/api/comments-reply/:videoId", async (req, res) => {
+  const videoId = req.params.videoId;
+  const continuation = req.query.continuation || '';
+  if (!videoId || !/^[\w-]{6,20}$/.test(videoId)) {
+    return res.status(400).json({ error: "Invalid video id" });
+  }
+  try {
+    for (const apiBase of apiListCache) {
+      try {
+        const url = `${apiBase}/api/comments/${videoId}${continuation ? `?continuation=${encodeURIComponent(continuation)}` : ''}`;
+        const r = await fetchWithTimeout(url, {}, 4000);
+        if (r.ok) {
+          const data = await r.json();
+          res.set("Cache-Control", "public, max-age=120");
+          return res.json(data);
+        }
+      } catch (_) { continue; }
+    }
+    return res.status(502).json({ error: "All comment sources failed", comments: [] });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal Error", message: err.message, comments: [] });
   }
 });
 
