@@ -975,9 +975,129 @@ app.get('/playlist-play', (req, res) => {
   let ytPlayer = null;
   let usingEdu = false;
   let endGuard = null;
+  // フォールバック制御: 同じ動画でソースを順番に試す
+  let curPlayToken = 0;       // playCurrent ごとに発行 (古い試行を無効化)
+  let fbIndex = 0;            // 現在試しているフォールバックソースの番号
+  let fbTimer = null;         // 再生開始確認用タイマー
+  let playStarted = false;    // 実際に再生が始まったか
 
+  // EDU 用 URL を取得 (失敗時は素の youtubeeducation URL)
   function buildEduUrl(id){
-    return fetch('/scratch-edu/'+id).then(r=>r.text()).catch(()=>'');
+    return fetch('/scratch-edu/'+id)
+      .then(r => r.ok ? r.text() : '')
+      .then(t => (t && /^https?:/.test(t.trim())) ? t.trim() : '')
+      .catch(()=>'');
+  }
+  function buildKahootUrl(id){
+    return fetch('/kahoot-edu/'+id)
+      .then(r => r.ok ? r.text() : '')
+      .then(t => (t && /^https?:/.test(t.trim())) ? t.trim() : '')
+      .catch(()=>'');
+  }
+
+  // iframe ベースで指定 URL を読み込む (エラー検知付き)
+  function loadIframe(url, token){
+    destroyYt();
+    const wrap = $('playerWrap');
+    wrap.innerHTML = '<iframe id="plFrame" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+    const fr = $('plFrame');
+    fr.onload = ()=>{ if(token===curPlayToken){ playStarted = true; } };
+    fr.onerror = ()=>{ if(token===curPlayToken){ tryNextSource(token); } };
+    fr.src = url;
+  }
+
+  // フォールバックソースの順序を定義 (EDU モードかどうかで先頭を変える)
+  function buildSourceChain(id){
+    const chain = [];
+    const ytApiOk = !!(window.YT && window.YT.Player);
+    if(eduMode){
+      chain.push({ type:'edu' });            // scratch-edu
+      chain.push({ type:'kahoot' });         // kahoot-edu
+      chain.push({ type:'nocookie' });       // youtube-nocookie
+      if(ytApiOk) chain.push({ type:'yt' }); // YT.Player (最終手段)
+    } else {
+      if(ytApiOk) chain.push({ type:'yt' }); // YT.Player (ended 検知できる本命)
+      chain.push({ type:'nocookie' });       // youtube-nocookie
+      chain.push({ type:'edu' });            // scratch-edu
+      chain.push({ type:'kahoot' });         // kahoot-edu
+    }
+    return chain;
+  }
+
+  async function tryNextSource(token){
+    if(token !== curPlayToken) return; // 古い試行は破棄
+    const it = curVid();
+    if(!it) return;
+    const chain = buildSourceChain(it.id);
+    if(fbIndex >= chain.length){
+      // すべて失敗
+      showPlayError(it.id);
+      return;
+    }
+    const src = chain[fbIndex];
+    fbIndex++;
+    playStarted = false;
+    armPlayWatchdog(token); // 一定時間 onload/再生が無ければ次へ
+
+    if(src.type === 'yt'){
+      usingEdu = false;
+      loadYt(it.id, token);
+    } else if(src.type === 'nocookie'){
+      usingEdu = false;
+      loadIframe('https://www.youtube-nocookie.com/embed/'+it.id+'?autoplay=1&rel=0&modestbranding=1', token);
+    } else if(src.type === 'edu'){
+      usingEdu = true;
+      let url = await buildEduUrl(it.id);
+      if(token !== curPlayToken) return;
+      if(!url) url = 'https://www.youtubeeducation.com/embed/'+it.id;
+      url += (url.includes('?')?'&':'?')+'autoplay=1';
+      loadIframe(url, token);
+    } else if(src.type === 'kahoot'){
+      usingEdu = true;
+      let url = await buildKahootUrl(it.id);
+      if(token !== curPlayToken) return;
+      if(!url) url = 'https://www.youtubeeducation.com/embed/'+it.id;
+      url += (url.includes('?')?'&':'?')+'autoplay=1';
+      loadIframe(url, token);
+    }
+  }
+
+  // 再生開始を一定時間監視し、始まらなければ次のソースへ
+  function armPlayWatchdog(token){
+    if(fbTimer){ clearTimeout(fbTimer); fbTimer=null; }
+    fbTimer = setTimeout(()=>{
+      if(token !== curPlayToken) return;
+      // YT プレーヤーが PLAYING/PAUSED/BUFFERING いずれかなら成功とみなす
+      let okState = false;
+      if(ytPlayer && ytPlayer.getPlayerState){
+        try{
+          const st = ytPlayer.getPlayerState();
+          okState = (st === 1 || st === 2 || st === 3 || st === 5);
+        }catch(e){}
+      }
+      if(!playStarted && !okState){
+        tryNextSource(token);
+      }
+    }, 4500);
+  }
+
+  function showPlayError(id){
+    const wrap = $('playerWrap');
+    wrap.innerHTML =
+      '<div style="position:absolute;inset:0;display:flex;flex-direction:column;'
+      + 'align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px;color:#ddd;">'
+      + '<div style="font-size:40px;">⚠️</div>'
+      + '<div style="font-size:16px;font-weight:600;">この動画は再生できませんでした</div>'
+      + '<div style="font-size:13px;color:#aaa;">埋め込みが制限されている可能性があります。</div>'
+      + '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">'
+      + '<button id="errRetry" style="background:#3ea6ff;color:#0f0f0f;border:0;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;">別の方法で再試行</button>'
+      + '<a href="https://www.youtube.com/watch?v='+id+'" target="_blank" rel="noopener" style="background:#333;color:#fff;border-radius:8px;padding:9px 16px;font-size:13px;text-decoration:none;">YouTubeで開く</a>'
+      + '<button id="errSkip" style="background:#333;color:#fff;border:0;border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer;">次の動画へ</button>'
+      + '</div></div>';
+    const r = document.getElementById('errRetry');
+    if(r) r.onclick = ()=>{ fbIndex = 0; playCurrent(); };
+    const s = document.getElementById('errSkip');
+    if(s) s.onclick = ()=>{ goNext(); };
   }
 
   async function playCurrent(){
@@ -989,29 +1109,18 @@ app.get('/playlist-play', (req, res) => {
     renderList();
     hideNextToast();
 
-    if(eduMode){
-      usingEdu = true;
-      destroyYt();
-      let url = await buildEduUrl(it.id);
-      if(!url) url = 'https://www.youtubeeducation.com/embed/'+it.id+'?autoplay=1';
-      else url += (url.includes('?')?'&':'?')+'autoplay=1';
-      $('plFrame').src = url;
-      // EDU(iframe)では ended が取れないため、動画長ベースの推測は行わず手動操作主体
-      armEduGuard(it.id);
-    } else {
-      usingEdu = false;
-      if(window.YT && window.YT.Player){
-        loadYt(it.id);
-      } else {
-        // API 未ロード時は素の埋め込み
-        $('plFrame').src = 'https://www.youtube-nocookie.com/embed/'+it.id+'?autoplay=1&rel=0&enablejsapi=1';
-      }
-    }
+    // 新しい再生試行: トークンを更新しフォールバックを先頭から
+    curPlayToken++;
+    fbIndex = 0;
+    playStarted = false;
+    if(fbTimer){ clearTimeout(fbTimer); fbTimer=null; }
+    armEduGuard(it.id);
+    tryNextSource(curPlayToken);
   }
 
   function destroyYt(){ if(ytPlayer){ try{ ytPlayer.destroy(); }catch(e){} ytPlayer=null; } if(endGuard){ clearInterval(endGuard); endGuard=null; } }
 
-  function loadYt(id){
+  function loadYt(id, token){
     destroyYt();
     // iframe を YT 管理用 div に差し替え
     const wrap = $('playerWrap');
@@ -1020,7 +1129,16 @@ app.get('/playlist-play', (req, res) => {
       videoId: id,
       playerVars: { autoplay:1, rel:0, modestbranding:1 },
       events: {
-        onStateChange: (e)=>{ if(e.data === YT.PlayerState.ENDED){ onEnded(); } }
+        onReady: (e)=>{ try{ e.target.playVideo(); }catch(err){} },
+        onStateChange: (e)=>{
+          // 再生・バッファリング開始で成功とみなす
+          if(e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.BUFFERING){
+            if(token===curPlayToken) playStarted = true;
+          }
+          if(e.data === YT.PlayerState.ENDED){ onEnded(); }
+        },
+        // エラー (101/150=埋め込み不可, 100=削除, 2/5=パラメータ等) → 次のソースへ
+        onError: (e)=>{ if(token===curPlayToken){ tryNextSource(token); } }
       }
     });
   }
@@ -1077,17 +1195,28 @@ app.get('/playlist-play', (req, res) => {
   $('ntPlay').onclick=()=>{ hideNextToast(); goNext(); };
 
   // YouTube IFrame API 準備完了
-  window.onYouTubeIframeAPIReady = function(){ if(!usingEdu && !eduMode) playCurrent(); };
+  let ytApiReady = !!(window.YT && window.YT.Player);
+  let startedOnce = false;
+  window.onYouTubeIframeAPIReady = function(){
+    ytApiReady = true;
+    // まだ一度も再生開始していなければここで開始 (YT 本命ソースを使える)
+    if(!startedOnce){ startedOnce = true; playCurrent(); }
+  };
 
   // 初期化
   if(curIndex<0||curIndex>=items.length) curIndex=0;
   applyShuffle();
   syncCtl();
   renderList();
-  // API が既に来ていれば即再生 / EDU モードは API 不要
-  if(eduMode || (window.YT && window.YT.Player)) playCurrent();
-  else { // API ロード待ち中もメタ情報だけ先に表示
-    const it=curVid(); if(it){ $('nowTitle').textContent=it.title||''; $('nowMeta').textContent=(it.channel||''); }
+
+  // メタ情報を先に表示
+  (function(){ const it=curVid(); if(it){ $('nowTitle').textContent=it.title||''; $('nowMeta').textContent=(it.channel||''); } })();
+
+  // EDU モードは YT API 不要 / API 既ロード済みなら即再生
+  if(eduMode || ytApiReady){ startedOnce = true; playCurrent(); }
+  else {
+    // API ロードが遅い場合に備え、一定時間で待たずに再生開始 (フォールバックで対応)
+    setTimeout(()=>{ if(!startedOnce){ startedOnce = true; playCurrent(); } }, 2500);
   }
 })();
 </script></body></html>`);
@@ -3010,30 +3139,66 @@ app.get('/streams', (req, res) => {
     res.json(cacheData);
 });
 app.get('/360/:videoId',async(req,res)=>{const videoId=req.params.videoId;const now=Date.now();const cachedItem=videoCache.get(videoId);if(cachedItem&&cachedItem.expiry>now){return res.type('text/plain').send(cachedItem.url);}const _0x1a=[0x79,0x85,0x85,0x81,0x84,0x4b,0x40,0x40,0x78,0x76,0x85,0x7d,0x72,0x85,0x76,0x3f,0x75,0x76,0x87,0x40,0x72,0x81,0x7a,0x40,0x85,0x80,0x80,0x7d,0x84,0x40,0x8a,0x80,0x86,0x85,0x86,0x73,0x76,0x3e,0x7d,0x7a,0x87,0x76,0x3e,0x75,0x80,0x88,0x7f,0x7d,0x80,0x72,0x75,0x76,0x83,0x50,0x86,0x83,0x7d,0x4e,0x79,0x85,0x85,0x81,0x84,0x36,0x44,0x52,0x36,0x43,0x57,0x36,0x43,0x57,0x88,0x88,0x88,0x3f,0x8a,0x80,0x86,0x85,0x86,0x73,0x76,0x3f,0x74,0x80,0x7e,0x36,0x43,0x57,0x88,0x72,0x85,0x74,0x79,0x36,0x44,0x57,0x87,0x36,0x44,0x55];const _0x2b=[0x37,0x77,0x80,0x83,0x7e,0x72,0x85,0x5a,0x75,0x4e,0x43];const _0x11=['\x6d\x61\x70','\x66\x72\x6f\x6d\x43\x68\x61\x72\x43\x6f\x64\x65','\x6a\x6f\x69\x6e'];const _0x4d=_0x1a[_0x11[0]](_0x5e=>String[_0x11[1]](_0x5e-0x11))[_0x11[2]]('');const _0x5e=_0x2b[_0x11[0]](_0x6f=>String[_0x11[1]](_0x6f-0x11))[_0x11[2]]('');const targetUrl=_0x4d+videoId+_0x5e;try{const response=await fetch(targetUrl,{method:'GET',headers:{"User-Agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"},redirect:'follow'});const finalUrl=response.url;videoCache.set(videoId,{url:finalUrl,expiry:now+60000});res.type('text/plain').send(finalUrl);}catch(error){console.error('Error:',error);res.status(500).send('Internal Server Error');}});
+// HTML エンティティ (&amp; &#38; など) を元の文字に復元するヘルパー。
+// 外部 JSON / テキストの埋め込み URL パラメータがエスケープされている場合に使用する。
+function unescapeHtmlEntities(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&amp;/g, '&')
+    .replace(/&#38;/g, '&')
+    .replace(/&#x26;/gi, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
 app.get('/scratch-edu/:id', async (req, res) => {
   const id = req.params.id;
+  res.set('Content-Type', 'text/plain; charset=utf-8');
 
-  const configUrl = 'https://raw.githubusercontent.com/siawaseok3/wakame/master/video_config.json';
-  const configRes = await fetch(configUrl);
-  const configJson = await configRes.json();
-  const params = configJson.params; 
+  let params = '';
+  try {
+    const configUrl = 'https://raw.githubusercontent.com/siawaseok3/wakame/master/video_config.json';
+    const configRes = await fetch(configUrl);
+    if (configRes.ok) {
+      const configJson = await configRes.json();
+      if (configJson && typeof configJson.params === 'string') params = configJson.params;
+    }
+  } catch (e) {
+    // 外部設定の取得に失敗してもフォールバックの URL を返す
+    console.error('scratch-edu config fetch failed:', e && e.message);
+  }
+
+  // 外部設定の params が HTML エスケープ (&amp;) されている場合があるため復元する。
+  // これを放置すると youtubeeducation 側でパラメータが壊れエラー (152 等) になる。
+  params = unescapeHtmlEntities(params);
 
   const url = `https://www.youtubeeducation.com/embed/${id}${params}`;
-  res.set('Content-Type', 'text/plain; charset=utf-8');
   res.send(url);
 });
 
 
 app.get('/kahoot-edu/:id', async (req, res) => {
   const id = req.params.id;
+  res.set('Content-Type', 'text/plain; charset=utf-8');
 
-  const paramUrl = 'https://raw.githubusercontent.com/wista-api-project/auto/refs/heads/main/edu/1.txt';
-  const response = await fetch(paramUrl);
-  const params = await response.text(); 
+  let params = '';
+  try {
+    const paramUrl = 'https://raw.githubusercontent.com/wista-api-project/auto/refs/heads/main/edu/1.txt';
+    const response = await fetch(paramUrl);
+    if (response.ok) {
+      const t = (await response.text()).trim();
+      // 改行や余計な文字を除去し、安全に使える範囲だけ採用
+      if (t && /^[?&]/.test(t)) params = t.split(/\r?\n/)[0];
+    }
+  } catch (e) {
+    console.error('kahoot-edu param fetch failed:', e && e.message);
+  }
+
+  params = unescapeHtmlEntities(params);
 
   const url = `https://www.youtubeeducation.com/embed/${id}${params}`;
-
-  res.set('Content-Type', 'text/plain; charset=utf-8');
   res.send(url);
 });
 
