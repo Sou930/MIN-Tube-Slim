@@ -1880,6 +1880,32 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
       }
     }
 
+    // ── v1.4.0: おすすめフィードの関連性スコアリング ──
+    // 日本語/英数字対応の簡易トークナイザ（無関係動画の混入を防ぐ）
+    const FEED_STOPWORDS = new Set([
+      'official','video','music','mv','lyrics','feat','ver','full','hd','4k',
+      'the','and','for','you','your','with','from','this','that','live',
+      '公式','動画','実況','解説','まとめ','最新','人気','話題','チャンネル','ライブ','配信'
+    ]);
+    function feedTokenize(str) {
+      if (!str) return [];
+      const lowered = String(str).toLowerCase();
+      const matches = lowered.match(/[a-z0-9]+|[\u3040-\u30ff\u4e00-\u9faf]+/g) || [];
+      const tokens = [];
+      for (const m of matches) {
+        if (/^[a-z0-9]+$/.test(m)) {
+          if (m.length >= 2 && !FEED_STOPWORDS.has(m)) tokens.push(m);
+        } else if (m.length >= 2 && !FEED_STOPWORDS.has(m)) {
+          tokens.push(m);
+          for (let i = 0; i + 2 <= m.length; i++) {
+            const bi = m.slice(i, i + 2);
+            if (!FEED_STOPWORDS.has(bi)) tokens.push(bi);
+          }
+        }
+      }
+      return tokens;
+    }
+
     function normalizeAndFilterList(list) {
       const out = [];
       for (const it of list) {
@@ -2486,18 +2512,64 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
       return channels;
     }
 
-    // 閲覧履歴からキーワードを抽出（チャンネル名 + タイトルの主要語）
+    // 閲覧履歴からキーワードを抽出（チャンネル名 + タイトルの代表フレーズ）
+    //  v1.4.0: 単純な空白分割だと日本語タイトルで無意味な断片が混ざり
+    //  「関係ない動画」が多発していたため、出現頻度の高い語を採用するよう改善。
     function getHistoryKeywords() {
       const hist = libGet(LIB_HISTORY);
-      const channels = [...new Set(hist.slice(0, 30).map(h => h.channel).filter(Boolean))];
-      const titleWords = [];
-      hist.slice(0, 20).forEach(h => {
+      // 直近の視聴ほど重視（先頭優先）
+      const recent = hist.slice(0, 25);
+      const channels = [...new Set(recent.map(h => h.channel).filter(Boolean))];
+
+      // 履歴タイトルからトークンを集計し、頻出語をキーワード化
+      const freq = new Map();
+      recent.forEach((h, idx) => {
         if (!h.title) return;
-        // 短い語・記号を除いてキーワード抽出
-        const words = h.title.replace(/[【】「」()!！?？\[\]#♪★☆◆◇]/g, ' ').split(/\s+/).filter(w => w.length >= 3);
-        words.slice(0, 2).forEach(w => titleWords.push(w));
+        const cleaned = h.title.replace(/[【】「」()!！?？\[\]#♪★☆◆◇|｜]/g, ' ');
+        // 検索クエリとして使える「語の塊」（英数字 or 日本語、3文字以上）
+        const phrases = (cleaned.toLowerCase().match(/[a-z0-9]{3,}|[\u3040-\u30ff\u4e00-\u9faf]{3,}/g) || []);
+        const weight = 1 + Math.max(0, (recent.length - idx)) / recent.length; // 新しいほど重い
+        new Set(phrases).forEach(p => {
+          if (FEED_STOPWORDS.has(p)) return;
+          freq.set(p, (freq.get(p) || 0) + weight);
+        });
       });
-      return { channels: channels.slice(0, 5), titleWords: [...new Set(titleWords)].slice(0, 8) };
+
+      // 頻度順に上位語を採用（無関係な単発語を除外）
+      const titleWords = [...freq.entries()]
+        .filter(([, c]) => c >= 1) // 1回でも採用するが頻度順で並べる
+        .sort((a, b) => b[1] - a[1])
+        .map(([w]) => w)
+        .slice(0, 6);
+
+      return { channels: channels.slice(0, 5), titleWords };
+    }
+
+    // 履歴・登録から作った「興味プロファイル」のトークン集合を作成
+    function buildInterestTokens() {
+      const hist = libGet(LIB_HISTORY).slice(0, 30);
+      const subs = getSubscribedChannels();
+      const set = new Set();
+      hist.forEach(h => {
+        feedTokenize(h.title).forEach(t => set.add(t));
+        feedTokenize(h.channel).forEach(t => set.add(t));
+      });
+      subs.forEach(s => feedTokenize(s).forEach(t => set.add(t)));
+      return set;
+    }
+
+    // 候補動画が興味プロファイルとどれだけ関連するかをスコア化
+    function feedRelevanceScore(item, interestTokens, subscribedSet) {
+      if (!item || !item.title) return 0;
+      let score = 0;
+      const counted = new Set();
+      for (const t of feedTokenize(item.title)) {
+        if (counted.has(t)) continue;
+        if (interestTokens.has(t)) { score++; counted.add(t); }
+      }
+      const ch = (item.channelTitle || item.channelName || '');
+      if (ch && subscribedSet.has(ch)) score += 4; // 登録チャンネルは強くブースト
+      return score;
     }
 
     // パーソナライズフィードを構築（登録チャンネル＋履歴キーワードで検索、シャッフル混合）
@@ -2545,7 +2617,29 @@ if (!currentUrl.includes("projects") && !currentUrl.includes("private") && !curr
         // 重複除去
         const seen = new Set([...displayedIds]);
         items = items.filter(it => { if (seen.has(it.id)) return false; seen.add(it.id); return true; });
-        items = shuffleArray(items);
+
+        // ★ v1.4.0: 興味プロファイルとの関連性でフィルタリング
+        //   無関係な検索ノイズ（関係ない動画）を除外し、関連度順に並べる。
+        const interestTokens = buildInterestTokens();
+        const subscribedSet = new Set(subscribedChannels);
+        const scored = items
+          .map(it => ({ it, s: feedRelevanceScore(it, interestTokens, subscribedSet) }));
+
+        // トレンド由来の動画はスコア0でも一定数だけ「発見」用に残す
+        const relevant = scored.filter(x => x.s >= 1).sort((a, b) => b.s - a.s);
+        const discovery = shuffleArray(scored.filter(x => x.s === 0).map(x => x.it)).slice(0, page === 0 ? 6 : 3);
+
+        // 関連動画を主、発見枠を従としてミックス（関連が十分あればノイズを抑制）
+        let mixed = relevant.map(x => x.it);
+        if (mixed.length >= 6) {
+          // 関連が十分 → 発見枠は控えめに混ぜる
+          mixed = [...mixed, ...discovery];
+        } else {
+          // 関連が少ない → 発見枠も活用してフィードを埋める
+          mixed = [...mixed, ...discovery, ...shuffleArray(scored.filter(x => x.s === 0).map(x => x.it))];
+        }
+        // 関連度の高い上位は維持しつつ、適度に多様性を出すため軽くシャッフル
+        items = mixed;
 
         if (items.length === 0 && page === 0) {
           videoGrid.innerHTML = '<p class="empty">動画が見つかりませんでした。</p>';
