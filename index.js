@@ -329,6 +329,84 @@ const htmlCacheHeaders = (res) => {
   res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
 };
 
+// ──────────────────────────────────────────────────────────────────────────
+// v1.4.0: おすすめ／関連動画の関連性スコアリング
+//  - これまでは検索結果を単純に結合・シャッフルしていたため、無関係な動画が
+//    多数混ざっていた。元動画のタイトル／チャンネルとの一致度でスコアを付け、
+//    関連性が低いものを除外・後ろに回すことで精度を改善する。
+// ──────────────────────────────────────────────────────────────────────────
+
+// 日本語・英数字に対応した簡易トークナイザ
+//  - 英数字の連なり、ひらがな/カタカナ/漢字の連なりをそれぞれ語として抽出
+const STOPWORDS = new Set([
+  'official','video','music','mv','lyrics','feat','ver','full','hd','4k',
+  'the','and','for','you','your','with','from','this','that',
+  '公式','動画','実況','解説','まとめ','最新','人気','話題','チャンネル',
+  'live','ライブ','配信','part','epi','episode','season'
+]);
+
+function tokenizeForRelevance(str) {
+  if (!str) return [];
+  const lowered = String(str).toLowerCase();
+  // 記号をスペースに、英数字塊・日本語塊を抽出
+  const matches = lowered.match(/[a-z0-9]+|[\u3040-\u30ff\u4e00-\u9faf]+/g) || [];
+  const tokens = [];
+  for (const m of matches) {
+    // 英数字は 2 文字以上、日本語は 2 文字以上を採用
+    if (/^[a-z0-9]+$/.test(m)) {
+      if (m.length >= 2 && !STOPWORDS.has(m)) tokens.push(m);
+    } else {
+      if (m.length >= 2 && !STOPWORDS.has(m)) {
+        tokens.push(m);
+        // 日本語は連続2文字のバイグラムにも分解（部分一致を取りやすくする）
+        for (let i = 0; i + 2 <= m.length; i++) {
+          const bi = m.slice(i, i + 2);
+          if (!STOPWORDS.has(bi)) tokens.push(bi);
+        }
+      }
+    }
+  }
+  return tokens;
+}
+
+// 元動画の {title, channel} に対して候補アイテムの関連スコアを算出
+function relevanceScore(item, refTokenSet, refChannelLower) {
+  if (!item || !item.title) return 0;
+  const titleTokens = tokenizeForRelevance(item.title);
+  if (titleTokens.length === 0) return 0;
+
+  let overlap = 0;
+  const counted = new Set();
+  for (const t of titleTokens) {
+    if (counted.has(t)) continue;
+    if (refTokenSet.has(t)) { overlap++; counted.add(t); }
+  }
+  // 共通トークン比率（候補タイトルのうちどれだけ元動画と被るか）
+  let score = overlap;
+
+  // 同一チャンネルは強めにブースト
+  const ch = (item.channelTitle || item.channelName || '').toLowerCase();
+  if (refChannelLower && ch && (ch === refChannelLower || ch.includes(refChannelLower) || refChannelLower.includes(ch))) {
+    score += 3;
+  }
+  return score;
+}
+
+// スコアでフィルタ・並べ替え（関連性が低いものを除外）
+function rankByRelevance(items, refTitle, refChannel, { minScore = 1, limit = 24 } = {}) {
+  const refTokens = new Set(tokenizeForRelevance(refTitle));
+  const refChannelLower = (refChannel || '').toLowerCase();
+  const scored = [];
+  for (const it of items) {
+    const s = relevanceScore(it, refTokens, refChannelLower);
+    scored.push({ it, s });
+  }
+  // スコア >= minScore を関連動画として優先採用
+  const relevant = scored.filter(x => x.s >= minScore).sort((a, b) => b.s - a.s);
+  const result = relevant.map(x => x.it).slice(0, limit);
+  return result;
+}
+
 app.get("/", (req, res) => {
   htmlCacheHeaders(res);
   res.sendFile(path.join(__dirname, "public", "home.html"));
@@ -1015,14 +1093,20 @@ app.get('/playlist-play', (req, res) => {
 </script></body></html>`);
 });
 
-// ── 更新履歴 (README.md の「## 更新履歴」セクションをパース) ──
+// ── 更新履歴 (CHANGELOG.md の「## 更新履歴」セクションをパース) ──
+//  v1.4.0: 開発者向けの詳細な履歴は README.md から CHANGELOG.md に移動。
+//  互換のため、CHANGELOG.md が無い場合は README.md にフォールバックする。
 let _changelogCache = null;
 let _changelogCacheAt = 0;
 function parseChangelog() {
   const now = Date.now();
   if (_changelogCache && (now - _changelogCacheAt) < 5 * 60 * 1000) return _changelogCache;
   let md = '';
-  try { md = fs.readFileSync(path.join(__dirname, 'README.md'), 'utf8'); } catch (e) { md = ''; }
+  try {
+    md = fs.readFileSync(path.join(__dirname, 'CHANGELOG.md'), 'utf8');
+  } catch (e) {
+    try { md = fs.readFileSync(path.join(__dirname, 'README.md'), 'utf8'); } catch (e2) { md = ''; }
+  }
 
   // 「## 更新履歴」から次の「## 」見出しまでを切り出す
   const startIdx = md.indexOf('## 更新履歴');
@@ -1169,13 +1253,18 @@ app.get("/api/recommendations", async (req, res) => {
       .replace(/\s+/g, ' ')
       .trim();
 
-    const words = cleanKwd.split(' ').filter(w => w.length >= 2);
-    const mainTopic = words.length > 0 ? words.slice(0, 2).join(' ') : cleanKwd;
+    // 元タイトルから関連性の高い検索クエリを構成（先頭の主要語を活用）
+    const refTokens = tokenizeForRelevance(title).filter(t => t.length >= 2);
+    const topicWords = cleanKwd.split(' ').filter(w => w.length >= 2);
+    const mainTopic = topicWords.length > 0 ? topicWords.slice(0, 3).join(' ') : cleanKwd;
+    // 主要語が無い（日本語のみ等）場合はトークンから補う
+    const fallbackTopic = refTokens.slice(0, 3).join(' ');
+    const topicQuery = mainTopic || fallbackTopic || title;
 
     const [topicRes, channelRes, relatedRes] = await Promise.all([
-      yts.GetListByKeyword(`${mainTopic}`, false, 12),
-      yts.GetListByKeyword(`${channel}`, false, 8),
-      yts.GetListByKeyword(`${mainTopic} 関連`, false, 8)
+      yts.GetListByKeyword(`${topicQuery}`, false, 16),
+      channel ? yts.GetListByKeyword(`${channel}`, false, 10) : Promise.resolve({ items: [] }),
+      yts.GetListByKeyword(`${topicQuery} 関連`, false, 10)
     ]);
 
     let rawList = [
@@ -1184,30 +1273,38 @@ app.get("/api/recommendations", async (req, res) => {
       ...(relatedRes.items || [])
     ];
 
-    const seenIds = new Set([id]); 
+    // 動画のみ・重複(ID/類似タイトル)を除外
+    const seenIds = new Set([id]);
     const seenNormalizedTitles = new Set();
-    const finalItems = [];
+    const dedupedItems = [];
 
     for (const item of rawList) {
       if (!item.id || item.type !== 'video') continue;
       if (seenIds.has(item.id)) continue;
+      if (!item.title) continue;
 
-      // タイトルの正規化による「重複内容」の排除
       const normalized = item.title.toLowerCase()
         .replace(/\s+/g, '')
         .replace(/official|lyrics|mv|musicvideo|video|公式|実況|解説/g, '');
 
       const titleSig = normalized.substring(0, 12);
-      if (seenNormalizedTitles.has(titleSig)) continue;
+      if (titleSig && seenNormalizedTitles.has(titleSig)) continue;
 
       seenIds.add(item.id);
-      seenNormalizedTitles.add(titleSig);
-      finalItems.push(item);
-
-      if (finalItems.length >= 24) break; 
+      if (titleSig) seenNormalizedTitles.add(titleSig);
+      dedupedItems.push(item);
     }
 
-    const result = finalItems.sort(() => 0.5 - Math.random());
+    // ★ 関連性スコアで並べ替え＋無関係な動画を除外（少なくとも1語以上一致 or 同一チャンネル）
+    let ranked = rankByRelevance(dedupedItems, title, channel, { minScore: 1, limit: 24 });
+
+    // 関連動画が少なすぎる場合のフォールバック（元動画タイトルでの検索結果を緩く採用）
+    if (ranked.length < 8) {
+      const extra = dedupedItems.filter(it => !ranked.includes(it)).slice(0, 24 - ranked.length);
+      ranked = [...ranked, ...extra];
+    }
+
+    const result = ranked;
     const payload = { items: result };
     // 関連動画は 10 分キャッシュ
     await cacheSet(cacheKey, payload, 10 * 60 * 1000);
