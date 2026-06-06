@@ -727,6 +727,425 @@ app.get('/playlist', async (req, res) => {
 </script></body></html>`);
 });
 
+// ── プレイリスト連続再生ページ (ローカルプレイリスト mt_playlists 用) ──
+// /playlist-play?pl=<plId>&i=<index>&edu=1
+app.get('/playlist-play', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!DOCTYPE html><html lang="ja"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>プレイリスト再生 - MIN-Tube-Slim</title>
+<link rel="icon" href="/min-img.png">
+<style>
+  :root{ --bg:#0f0f0f; --panel:#181818; --panel2:#212121; --text:#f1f1f1; --muted:#aaa; --brand:#3ea6ff; --border:#303030; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:Roboto,'Noto Sans JP',system-ui,sans-serif; }
+  .topbar{ display:flex; align-items:center; gap:12px; padding:12px 18px; background:var(--panel); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:20; }
+  .topbar a.back{ color:var(--text); text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-size:14px; padding:8px 12px; border-radius:8px; background:var(--panel2); }
+  .topbar a.back:hover{ background:#2d2d2d; }
+  .topbar .brand{ font-weight:700; font-size:16px; }
+  .topbar .brand b{ color:var(--brand); }
+  .layout{ display:flex; gap:20px; padding:20px; max-width:1500px; margin:0 auto; align-items:flex-start; }
+  .main{ flex:1; min-width:0; }
+  .player-wrap{ position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:14px; overflow:hidden; }
+  .player-wrap iframe{ width:100%; height:100%; border:0; display:block; }
+  .now-title{ font-size:19px; font-weight:600; margin:16px 0 6px; line-height:1.4; }
+  .now-meta{ color:var(--muted); font-size:13px; margin-bottom:14px; }
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:6px; }
+  .ctl{ display:inline-flex; align-items:center; gap:7px; background:var(--panel2); color:var(--text); border:1px solid transparent; padding:8px 14px; border-radius:20px; cursor:pointer; font-size:13px; user-select:none; transition:background .15s,transform .1s; }
+  .ctl:hover{ background:#2d2d2d; }
+  .ctl:active{ transform:scale(.96); }
+  .ctl.on{ background:var(--brand); color:#0f0f0f; font-weight:600; }
+  .sw{ width:30px; height:16px; background:#555; border-radius:16px; position:relative; transition:background .2s; }
+  .ctl.on .sw{ background:#0f0f0f; }
+  .sw::after{ content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:#fff; transition:left .2s; }
+  .ctl.on .sw::after{ left:16px; }
+  .sidebar{ width:400px; min-width:340px; background:var(--panel); border:1px solid var(--border); border-radius:14px; overflow:hidden; max-height:calc(100vh - 60px); display:flex; flex-direction:column; position:sticky; top:80px; }
+  .sb-head{ padding:14px 16px; border-bottom:1px solid var(--border); }
+  .sb-head .pl-name{ font-size:16px; font-weight:700; }
+  .sb-head .pl-prog{ font-size:12px; color:var(--muted); margin-top:3px; }
+  .sb-list{ overflow-y:auto; flex:1; }
+  .pl-item{ display:flex; gap:10px; padding:9px 12px; cursor:pointer; align-items:center; border-left:3px solid transparent; }
+  .pl-item:hover{ background:rgba(255,255,255,.05); }
+  .pl-item.active{ background:rgba(62,166,255,.14); border-left-color:var(--brand); }
+  .pl-item .idx{ width:20px; text-align:center; font-size:12px; color:var(--muted); flex-shrink:0; }
+  .pl-item.active .idx{ color:var(--brand); font-weight:700; }
+  .pl-item .pi-thumb{ width:96px; min-width:96px; aspect-ratio:16/9; border-radius:6px; overflow:hidden; background:#000; position:relative; }
+  .pl-item .pi-thumb img{ width:100%; height:100%; object-fit:cover; }
+  .pl-item .pi-thumb .now-badge{ position:absolute; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:700; }
+  .pl-item .pi-info{ flex:1; min-width:0; }
+  .pl-item .pi-title{ font-size:13px; font-weight:500; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .pl-item .pi-ch{ font-size:11px; color:var(--muted); margin-top:3px; }
+  .empty{ padding:50px 20px; text-align:center; color:var(--muted); }
+  .empty a{ color:var(--brand); }
+  .next-toast{ position:fixed; right:24px; bottom:24px; background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; width:300px; box-shadow:0 8px 24px rgba(0,0,0,.5); transform:translateY(140%); transition:transform .35s cubic-bezier(.2,.8,.2,1); z-index:40; }
+  .next-toast.show{ transform:translateY(0); }
+  .next-toast .nt-label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .next-toast .nt-title{ font-size:14px; font-weight:600; margin:4px 0 10px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .next-toast .nt-bar{ height:3px; background:#444; border-radius:3px; overflow:hidden; margin-bottom:10px; }
+  .next-toast .nt-bar > div{ height:100%; background:var(--brand); width:100%; }
+  .next-toast .nt-act{ display:flex; gap:8px; }
+  .next-toast button{ flex:1; border:0; border-radius:8px; padding:8px; font-size:13px; cursor:pointer; }
+  .next-toast .nt-cancel{ background:#333; color:#fff; }
+  .next-toast .nt-play{ background:var(--brand); color:#0f0f0f; font-weight:600; }
+  @media (max-width:980px){
+    .layout{ flex-direction:column; padding:12px; }
+    .sidebar{ width:100%; min-width:0; position:static; max-height:none; }
+    .sb-list{ max-height:420px; }
+  }
+</style></head><body>
+<div class="topbar">
+  <a class="back" href="/">←&nbsp;ホーム</a>
+  <span class="brand">MIN-Tube<b>-Slim</b></span>
+</div>
+<div class="layout">
+  <div class="main">
+    <div class="player-wrap" id="playerWrap">
+      <iframe id="plFrame" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+    </div>
+    <div class="now-title" id="nowTitle">読み込み中…</div>
+    <div class="now-meta" id="nowMeta"></div>
+    <div class="controls">
+      <div class="ctl" id="autoplayCtl" title="動画終了時に自動で次へ"><span>自動再生</span><span class="sw"></span></div>
+      <div class="ctl" id="loopCtl" title="最後まで再生したら最初へ戻る"><span>ループ</span><span class="sw"></span></div>
+      <div class="ctl" id="shuffleCtl" title="シャッフル再生"><span>シャッフル</span><span class="sw"></span></div>
+      <div class="ctl" id="eduCtl" title="YouTube Education モードで再生"><span>EDUモード</span><span class="sw"></span></div>
+      <button class="ctl" id="prevBtn">⏮ 前へ</button>
+      <button class="ctl" id="nextBtn">次へ ⏭</button>
+    </div>
+  </div>
+  <div class="sidebar">
+    <div class="sb-head">
+      <div class="pl-name" id="plName">プレイリスト</div>
+      <div class="pl-prog" id="plProg"></div>
+    </div>
+    <div class="sb-list" id="plList"></div>
+  </div>
+</div>
+<div class="next-toast" id="nextToast">
+  <div class="nt-label">次の動画</div>
+  <div class="nt-title" id="ntTitle"></div>
+  <div class="nt-bar"><div id="ntBar"></div></div>
+  <div class="nt-act">
+    <button class="nt-cancel" id="ntCancel">キャンセル</button>
+    <button class="nt-play" id="ntPlay">今すぐ再生</button>
+  </div>
+</div>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+(function(){
+  const params = new URLSearchParams(location.search);
+  const plId = params.get('pl') || '';
+  let curIndex = parseInt(params.get('i')) || 0;
+  const LIB_PLAYLISTS = 'mt_playlists';
+
+  function getPlaylists(){ try{ return JSON.parse(localStorage.getItem(LIB_PLAYLISTS)||'[]'); }catch(e){ return []; } }
+  const pls = getPlaylists();
+  const pl = pls.find(p => p.id === plId);
+  let items = (pl && Array.isArray(pl.items)) ? pl.items.slice() : [];
+  // 再生順 (シャッフル時は order を入れ替え)
+  let order = items.map((_, i) => i);
+
+  // 設定 (localStorage)
+  let autoplay = localStorage.getItem('plp_autoplay') !== '0';
+  let loop      = localStorage.getItem('plp_loop') === '1';
+  let shuffle   = localStorage.getItem('plp_shuffle') === '1';
+  let eduMode   = localStorage.getItem('plp_edu') === '1';
+
+  const $ = id => document.getElementById(id);
+
+  if(!pl || !items.length){
+    document.querySelector('.layout').innerHTML =
+      '<div class="empty">再生リストが見つからないか空です。<br><br><a href="/">ホームに戻る</a></div>';
+    return;
+  }
+
+  $('plName').textContent = pl.name || 'プレイリスト';
+
+  function thumb(id){ return 'https://i.ytimg.com/vi/'+id+'/mqdefault.jpg'; }
+  function curVid(){ return items[order[curIndex]]; }
+
+  function applyShuffle(){
+    const playingVid = curVid();
+    order = items.map((_,i)=>i);
+    if(shuffle){
+      for(let k=order.length-1;k>0;k--){ const j=Math.floor(Math.random()*(k+1)); [order[k],order[j]]=[order[j],order[k]]; }
+    }
+    // 現在再生中の動画を先頭インデックスに合わせ直す
+    if(playingVid){ const np = order.findIndex(o => items[o].id === playingVid.id); if(np>=0) curIndex = np; }
+  }
+
+  function renderList(){
+    const list = $('plList');
+    list.innerHTML = order.map((o,pos)=>{
+      const it = items[o];
+      const active = pos === curIndex;
+      return '<div class="pl-item'+(active?' active':'')+'" data-pos="'+pos+'">'
+        + '<div class="idx">'+(active?'▶':(pos+1))+'</div>'
+        + '<div class="pi-thumb"><img src="'+thumb(it.id)+'" loading="lazy">'+(active?'<div class="now-badge">再生中</div>':'')+'</div>'
+        + '<div class="pi-info"><div class="pi-title">'+(it.title||'')+'</div><div class="pi-ch">'+(it.channel||'')+'</div></div>'
+        + '</div>';
+    }).join('');
+    list.querySelectorAll('.pl-item').forEach(el=>{
+      el.addEventListener('click', ()=>{ curIndex = parseInt(el.dataset.pos); playCurrent(); });
+    });
+    $('plProg').textContent = (curIndex+1)+' / '+items.length+'本';
+    const active = list.querySelector('.pl-item.active');
+    if(active) active.scrollIntoView({block:'nearest'});
+  }
+
+  // ===== プレーヤー =====
+  let ytPlayer = null;
+  let usingEdu = false;
+  let endGuard = null;
+
+  function buildEduUrl(id){
+    return fetch('/scratch-edu/'+id).then(r=>r.text()).catch(()=>'');
+  }
+
+  async function playCurrent(){
+    const it = curVid();
+    if(!it){ return; }
+    $('nowTitle').textContent = it.title || '';
+    $('nowMeta').textContent = (it.channel||'') + (it.views? ' • '+it.views : '');
+    history.replaceState(null,'','/playlist-play?pl='+encodeURIComponent(plId)+'&i='+curIndex+(eduMode?'&edu=1':''));
+    renderList();
+    hideNextToast();
+
+    if(eduMode){
+      usingEdu = true;
+      destroyYt();
+      let url = await buildEduUrl(it.id);
+      if(!url) url = 'https://www.youtubeeducation.com/embed/'+it.id+'?autoplay=1';
+      else url += (url.includes('?')?'&':'?')+'autoplay=1';
+      $('plFrame').src = url;
+      // EDU(iframe)では ended が取れないため、動画長ベースの推測は行わず手動操作主体
+      armEduGuard(it.id);
+    } else {
+      usingEdu = false;
+      if(window.YT && window.YT.Player){
+        loadYt(it.id);
+      } else {
+        // API 未ロード時は素の埋め込み
+        $('plFrame').src = 'https://www.youtube-nocookie.com/embed/'+it.id+'?autoplay=1&rel=0&enablejsapi=1';
+      }
+    }
+  }
+
+  function destroyYt(){ if(ytPlayer){ try{ ytPlayer.destroy(); }catch(e){} ytPlayer=null; } if(endGuard){ clearInterval(endGuard); endGuard=null; } }
+
+  function loadYt(id){
+    destroyYt();
+    // iframe を YT 管理用 div に差し替え
+    const wrap = $('playerWrap');
+    wrap.innerHTML = '<div id="ytmount"></div>';
+    ytPlayer = new YT.Player('ytmount', {
+      videoId: id,
+      playerVars: { autoplay:1, rel:0, modestbranding:1 },
+      events: {
+        onStateChange: (e)=>{ if(e.data === YT.PlayerState.ENDED){ onEnded(); } }
+      }
+    });
+  }
+
+  // EDU(iframe)用フォールバック: 推測タイマーは使わず、ユーザー操作で次へ進む設計
+  function armEduGuard(id){ if(endGuard){ clearInterval(endGuard); endGuard=null; } }
+
+  function onEnded(){
+    if(loop && curIndex >= items.length-1){ curIndex = 0; showNextToast(); return; }
+    if(curIndex < items.length-1){ showNextToast(); }
+  }
+
+  // ===== 次の動画トースト =====
+  let toastTimer=null;
+  function showNextToast(){
+    if(!autoplay){ goNext(); return; }
+    const nextPos = nextIndex();
+    if(nextPos===null) return;
+    const it = items[order[nextPos]];
+    $('ntTitle').textContent = it.title||'';
+    $('nextToast').classList.add('show');
+    const dur=6000, start=Date.now();
+    clearInterval(toastTimer);
+    toastTimer=setInterval(()=>{
+      const remain=Math.max(0,dur-(Date.now()-start));
+      $('ntBar').style.width=(remain/dur*100)+'%';
+      if(remain<=0){ clearInterval(toastTimer); toastTimer=null; goNext(); }
+    },80);
+  }
+  function hideNextToast(){ clearInterval(toastTimer); toastTimer=null; $('nextToast').classList.remove('show'); }
+
+  function nextIndex(){
+    if(curIndex < items.length-1) return curIndex+1;
+    if(loop) return 0;
+    return null;
+  }
+  function goNext(){ const n=nextIndex(); if(n===null){ hideNextToast(); return; } curIndex=n; playCurrent(); }
+  function goPrev(){ if(curIndex>0){ curIndex--; } else if(loop){ curIndex=items.length-1; } playCurrent(); }
+
+  // ===== コントロール UI =====
+  function syncCtl(){
+    $('autoplayCtl').classList.toggle('on', autoplay);
+    $('loopCtl').classList.toggle('on', loop);
+    $('shuffleCtl').classList.toggle('on', shuffle);
+    $('eduCtl').classList.toggle('on', eduMode);
+  }
+  $('autoplayCtl').onclick=()=>{ autoplay=!autoplay; localStorage.setItem('plp_autoplay',autoplay?'1':'0'); if(!autoplay) hideNextToast(); syncCtl(); };
+  $('loopCtl').onclick=()=>{ loop=!loop; localStorage.setItem('plp_loop',loop?'1':'0'); syncCtl(); };
+  $('shuffleCtl').onclick=()=>{ shuffle=!shuffle; localStorage.setItem('plp_shuffle',shuffle?'1':'0'); applyShuffle(); syncCtl(); renderList(); };
+  $('eduCtl').onclick=()=>{ eduMode=!eduMode; localStorage.setItem('plp_edu',eduMode?'1':'0'); syncCtl(); playCurrent(); };
+  $('prevBtn').onclick=goPrev;
+  $('nextBtn').onclick=()=>{ hideNextToast(); goNext(); };
+  $('ntCancel').onclick=hideNextToast;
+  $('ntPlay').onclick=()=>{ hideNextToast(); goNext(); };
+
+  // YouTube IFrame API 準備完了
+  window.onYouTubeIframeAPIReady = function(){ if(!usingEdu && !eduMode) playCurrent(); };
+
+  // 初期化
+  if(curIndex<0||curIndex>=items.length) curIndex=0;
+  applyShuffle();
+  syncCtl();
+  renderList();
+  // API が既に来ていれば即再生 / EDU モードは API 不要
+  if(eduMode || (window.YT && window.YT.Player)) playCurrent();
+  else { // API ロード待ち中もメタ情報だけ先に表示
+    const it=curVid(); if(it){ $('nowTitle').textContent=it.title||''; $('nowMeta').textContent=(it.channel||''); }
+  }
+})();
+</script></body></html>`);
+});
+
+// ── 更新履歴 (README.md の「## 更新履歴」セクションをパース) ──
+let _changelogCache = null;
+let _changelogCacheAt = 0;
+function parseChangelog() {
+  const now = Date.now();
+  if (_changelogCache && (now - _changelogCacheAt) < 5 * 60 * 1000) return _changelogCache;
+  let md = '';
+  try { md = fs.readFileSync(path.join(__dirname, 'README.md'), 'utf8'); } catch (e) { md = ''; }
+
+  // 「## 更新履歴」から次の「## 」見出しまでを切り出す
+  const startIdx = md.indexOf('## 更新履歴');
+  let section = '';
+  if (startIdx >= 0) {
+    const rest = md.slice(startIdx + '## 更新履歴'.length);
+    const nextH2 = rest.search(/\n##\s/);
+    section = nextH2 >= 0 ? rest.slice(0, nextH2) : rest;
+  }
+
+  // 各バージョン (### で始まる行) ごとに分割
+  const lines = section.split(/\r?\n/);
+  const versions = [];
+  let cur = null;
+  const inlineMd = (s) => s
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+?)`/g, '<code>$1</code>');
+
+  for (const line of lines) {
+    const h3 = line.match(/^###\s+(.*)$/);
+    if (h3) {
+      if (cur) versions.push(cur);
+      const titleRaw = h3[1].trim();
+      cur = { version: titleRaw, blocks: [] };
+      continue;
+    }
+    if (!cur) continue;
+    const t = line.trim();
+    if (!t) continue;
+    if (/^\*\*(.+?)\*\*$/.test(t)) {
+      // セクションヘッダ (例: **✨ 新機能**)
+      cur.blocks.push({ type: 'head', text: inlineMd(t.replace(/^\*\*|\*\*$/g, '')) });
+    } else {
+      const li = t.match(/^(\s*)[-*]\s+(.*)$/);
+      if (li) {
+        const indent = (line.match(/^(\s*)[-*]/) || [,''])[1].length;
+        cur.blocks.push({ type: 'li', level: indent >= 2 ? 1 : 0, text: inlineMd(li[2]) });
+      } else {
+        cur.blocks.push({ type: 'p', text: inlineMd(t) });
+      }
+    }
+  }
+  if (cur) versions.push(cur);
+
+  _changelogCache = versions;
+  _changelogCacheAt = now;
+  return versions;
+}
+
+app.get('/api/changelog', (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.json({ versions: parseChangelog() });
+});
+
+app.get('/changelog', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!DOCTYPE html><html lang="ja"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>更新履歴 - MIN-Tube-Slim</title>
+<link rel="icon" href="/min-img.png">
+<style>
+  :root{ --bg:#0f0f0f; --panel:#181818; --text:#f1f1f1; --muted:#aaa; --brand:#3ea6ff; --border:#303030; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:Roboto,'Noto Sans JP',system-ui,sans-serif; line-height:1.6; }
+  .topbar{ display:flex; align-items:center; gap:12px; padding:12px 18px; background:var(--panel); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:20; }
+  .topbar a.back{ color:var(--text); text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-size:14px; padding:8px 12px; border-radius:8px; background:#212121; }
+  .topbar a.back:hover{ background:#2d2d2d; }
+  .topbar .brand{ font-weight:700; font-size:16px; }
+  .topbar .brand b{ color:var(--brand); }
+  .container{ max-width:820px; margin:0 auto; padding:28px 20px 60px; }
+  h1{ font-size:26px; margin:0 0 6px; }
+  .sub{ color:var(--muted); font-size:14px; margin-bottom:28px; }
+  .ver{ position:relative; padding:0 0 6px 22px; margin-bottom:30px; border-left:2px solid var(--border); }
+  .ver::before{ content:''; position:absolute; left:-7px; top:4px; width:12px; height:12px; border-radius:50%; background:var(--brand); box-shadow:0 0 0 4px rgba(62,166,255,.15); }
+  .ver:first-of-type::before{ background:#4caf50; box-shadow:0 0 0 4px rgba(76,175,80,.18); }
+  .ver-title{ font-size:20px; font-weight:700; margin:0 0 4px; }
+  .ver:first-of-type .ver-title::after{ content:'NEW'; font-size:10px; background:#4caf50; color:#08230b; font-weight:800; padding:2px 7px; border-radius:10px; margin-left:9px; vertical-align:middle; letter-spacing:.5px; }
+  .blk-head{ font-size:14px; font-weight:700; margin:14px 0 6px; color:#fff; }
+  ul.cl{ margin:6px 0; padding-left:20px; }
+  ul.cl li{ font-size:14px; margin:3px 0; color:#ddd; }
+  ul.cl li.sub{ list-style:circle; margin-left:14px; color:var(--muted); font-size:13px; }
+  p.cl{ font-size:14px; color:#ddd; margin:6px 0; }
+  code{ background:#2a2a2a; padding:1px 6px; border-radius:5px; font-size:12px; color:#ffd479; }
+  .empty{ color:var(--muted); text-align:center; padding:40px; }
+</style></head><body>
+<div class="topbar">
+  <a class="back" href="/">←&nbsp;ホーム</a>
+  <span class="brand">MIN-Tube<b>-Slim</b></span>
+</div>
+<div class="container">
+  <h1>更新履歴</h1>
+  <div class="sub">MIN-Tube-Slim のアップデート内容を確認できます。</div>
+  <div id="clRoot"><div class="empty">読み込み中…</div></div>
+</div>
+<script>
+(async ()=>{
+  try{
+    const r = await fetch('/api/changelog');
+    const data = await r.json();
+    const versions = data.versions || [];
+    const root = document.getElementById('clRoot');
+    if(!versions.length){ root.innerHTML='<div class="empty">更新履歴がありません</div>'; return; }
+    root.innerHTML = versions.map(v=>{
+      let html = '<div class="ver"><div class="ver-title">'+v.version+'</div>';
+      let ulOpen = false;
+      const closeUl = ()=>{ if(ulOpen){ html+='</ul>'; ulOpen=false; } };
+      (v.blocks||[]).forEach(b=>{
+        if(b.type==='head'){ closeUl(); html+='<div class="blk-head">'+b.text+'</div>'; }
+        else if(b.type==='li'){ if(!ulOpen){ html+='<ul class="cl">'; ulOpen=true; } html+='<li'+(b.level?' class="sub"':'')+'>'+b.text+'</li>'; }
+        else { closeUl(); html+='<p class="cl">'+b.text+'</p>'; }
+      });
+      closeUl();
+      html+='</div>';
+      return html;
+    }).join('');
+  }catch(e){
+    document.getElementById('clRoot').innerHTML='<div class="empty">更新履歴の読み込みに失敗しました</div>';
+  }
+})();
+</script></body></html>`);
+});
+
 
 app.get("/api/recommendations", async (req, res) => {
   const { title, channel, id } = req.query;
