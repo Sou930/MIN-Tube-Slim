@@ -1460,6 +1460,54 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
         .next-up-overlay button.primary { background: #3ea6ff; color: #0f0f0f; font-weight: bold; }
         .next-up-overlay .nu-progress { height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; margin: 8px 0; overflow: hidden; }
         .next-up-overlay .nu-progress-bar { height: 100%; background: #3ea6ff; width: 100%; transition: width 0.2s linear; }
+
+        /* === v1.4.0 デザイン刷新：アクションバー === */
+        .video-title { letter-spacing: 0.2px; }
+        .owner-row { gap: 16px; flex-wrap: wrap; }
+        .btn-sub { transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease; }
+        .btn-sub:hover { transform: translateY(-1px); }
+        .btn-sub:active { transform: scale(0.97); }
+        .action-btn { display: inline-flex; align-items: center; gap: 8px; transition: background 0.18s ease, transform 0.15s ease, color 0.18s ease; }
+        .action-btn:hover { background: var(--bg-hover); transform: translateY(-1px); }
+        .action-btn:active { transform: scale(0.97); }
+        .action-btn i { font-size: 14px; }
+        .action-toolbar { gap: 10px; }
+        /* 保存(再生リスト)ボタンが追加済みのときの強調 */
+        .action-btn.saved { background: #3ea6ff; color: #0f0f0f; }
+        .action-btn.saved i { color: #0f0f0f; }
+
+        /* === v1.4.0：再生リスト保存モーダル === */
+        .pl-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 16px; }
+        .pl-modal-overlay.open { display: flex; animation: plFade 0.18s ease; }
+        @keyframes plFade { from { opacity: 0; } to { opacity: 1; } }
+        .pl-modal { width: 100%; max-width: 420px; background: #212121; border: 1px solid #333; border-radius: 16px; box-shadow: 0 16px 48px rgba(0,0,0,0.6); overflow: hidden; animation: plPop 0.2s cubic-bezier(0.34,1.56,0.64,1); }
+        @keyframes plPop { from { transform: translateY(12px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+        .pl-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 12px; }
+        .pl-modal-head h3 { margin: 0; font-size: 17px; font-weight: 600; }
+        .pl-modal-close { background: transparent; border: none; color: var(--text-sub); font-size: 18px; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; transition: background 0.15s; }
+        .pl-modal-close:hover { background: var(--bg-hover); color: #fff; }
+        .pl-modal-body { padding: 0 20px 8px; max-height: 46vh; overflow-y: auto; }
+        .pl-modal-body::-webkit-scrollbar { width: 6px; }
+        .pl-modal-body::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        .pl-item { display: flex; align-items: center; gap: 12px; padding: 12px 10px; border-radius: 10px; cursor: pointer; transition: background 0.15s; }
+        .pl-item:hover { background: var(--bg-hover); }
+        .pl-item .pl-check { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #666; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; color: #0f0f0f; transition: background 0.15s, border-color 0.15s; }
+        .pl-item.added .pl-check { background: #3ea6ff; border-color: #3ea6ff; }
+        .pl-item .pl-meta { flex: 1; min-width: 0; }
+        .pl-item .pl-name { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pl-item .pl-count { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+        .pl-empty { text-align: center; color: var(--text-sub); font-size: 14px; padding: 18px 0; }
+        .pl-create { padding: 12px 20px 20px; border-top: 1px solid #333; margin-top: 8px; }
+        .pl-create-label { font-size: 12px; color: var(--text-sub); margin-bottom: 8px; }
+        .pl-create-row { display: flex; gap: 8px; }
+        .pl-create-row input { flex: 1; background: #121212; border: 1px solid #303030; border-radius: 10px; color: #fff; padding: 0 14px; height: 42px; font-size: 14px; outline: none; transition: border-color 0.15s; }
+        .pl-create-row input:focus { border-color: #3ea6ff; }
+        .pl-create-row button { background: #3ea6ff; color: #0f0f0f; border: none; border-radius: 10px; padding: 0 18px; height: 42px; font-weight: 700; cursor: pointer; font-size: 14px; transition: filter 0.15s, transform 0.15s; white-space: nowrap; }
+        .pl-create-row button:hover { filter: brightness(1.08); }
+        .pl-create-row button:active { transform: scale(0.97); }
+        .pl-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #272727; color: #fff; padding: 12px 20px; border-radius: 24px; z-index: 4000; font-size: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.45); display: flex; align-items: center; gap: 8px; opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+        .pl-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .pl-toast i { color: #3ea6ff; }
     </style>
 </head>
 <body>
@@ -1522,6 +1570,7 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
                         <div id="downloadMenuList"><div class="dm-empty">取得中...</div></div>
                     </div>
                 </div>
+                <button class="action-btn" id="savePlBtn" onclick="openPlaylistModal()" title="再生リストに保存"><i class="fas fa-bookmark"></i> 保存</button>
                 <button class="action-btn">👍 ${videoData.likeCount || 0}</button>
                 <button class="action-btn" onclick="shareVideo()"><i class="fas fa-share"></i> 共有</button>
             </div>
@@ -1569,6 +1618,25 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
         </div>
     </div>
 </div>
+
+<!-- v1.4.0：再生リスト保存モーダル -->
+<div id="plModalOverlay" class="pl-modal-overlay" onclick="if(event.target===this)closePlaylistModal()">
+    <div class="pl-modal" role="dialog" aria-modal="true" aria-label="再生リストに保存">
+        <div class="pl-modal-head">
+            <h3><i class="fas fa-bookmark" style="color:#3ea6ff;margin-right:8px;"></i>再生リストに保存</h3>
+            <button class="pl-modal-close" onclick="closePlaylistModal()" aria-label="閉じる"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="pl-modal-body" id="plModalList"></div>
+        <div class="pl-create">
+            <div class="pl-create-label">新しい再生リストを作成</div>
+            <div class="pl-create-row">
+                <input type="text" id="plNewName" placeholder="再生リスト名" maxlength="40" autocomplete="off">
+                <button onclick="createPlaylistAndAdd()">作成して追加</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="plToast" class="pl-toast"></div>
 
 <script>
     function toggleServerMenu() { document.getElementById('serverMenu').classList.toggle('show'); }
@@ -2232,6 +2300,122 @@ const streamEmbedPlaceholder = `<div style="width:100%;height:100%;display:flex;
             prompt('動画URL:', url);
         }
     }
+
+    // ===== 6. 再生リスト保存 (v1.4.0) =====
+    // home.html と同じ localStorage スキーマ (mt_playlists) を共有
+    const PL_LIB_KEY = 'mt_playlists';
+    const PL_CURRENT_ITEM = {
+        id: ${JSON.stringify(videoId)},
+        title: ${JSON.stringify(videoData.videoTitle || '')},
+        channel: ${JSON.stringify(videoData.channelName || '')},
+        thumbnail: 'https://i.ytimg.com/vi/' + ${JSON.stringify(videoId)} + '/mqdefault.jpg',
+        type: 'video'
+    };
+
+    function plGet() { try { return JSON.parse(localStorage.getItem(PL_LIB_KEY) || '[]'); } catch (e) { return []; } }
+    function plSet(v) { try { localStorage.setItem(PL_LIB_KEY, JSON.stringify(v)); } catch (e) {} }
+
+    function plToast(msg, icon) {
+        const t = document.getElementById('plToast');
+        if (!t) return;
+        t.innerHTML = (icon ? '<i class="fas ' + icon + '"></i>' : '') + '<span>' + msg + '</span>';
+        t.classList.add('show');
+        clearTimeout(window.__plToastTimer);
+        window.__plToastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+    }
+
+    function plRenderList() {
+        const wrap = document.getElementById('plModalList');
+        const pls = plGet();
+        if (!pls.length) {
+            wrap.innerHTML = '<div class="pl-empty">まだ再生リストがありません。<br>下から新しく作成できます。</div>';
+            return;
+        }
+        wrap.innerHTML = pls.map(pl => {
+            const added = (pl.items || []).some(x => x.id === PL_CURRENT_ITEM.id);
+            const count = (pl.items || []).length;
+            return '<div class="pl-item' + (added ? ' added' : '') + '" data-id="' + pl.id + '" onclick="togglePlaylistItem(\\'' + pl.id + '\\')">' +
+                '<div class="pl-check">' + (added ? '<i class="fas fa-check"></i>' : '') + '</div>' +
+                '<div class="pl-meta"><div class="pl-name">' + escapeHtmlPl(pl.name) + '</div>' +
+                '<div class="pl-count">' + count + ' 本の動画</div></div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function escapeHtmlPl(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    }
+
+    function openPlaylistModal() {
+        plRenderList();
+        document.getElementById('plNewName').value = '';
+        document.getElementById('plModalOverlay').classList.add('open');
+    }
+    function closePlaylistModal() {
+        document.getElementById('plModalOverlay').classList.remove('open');
+        syncSavePlBtn();
+    }
+
+    function togglePlaylistItem(plId) {
+        const pls = plGet();
+        const pl = pls.find(p => p.id === plId);
+        if (!pl) return;
+        pl.items = pl.items || [];
+        const idx = pl.items.findIndex(x => x.id === PL_CURRENT_ITEM.id);
+        if (idx >= 0) {
+            pl.items.splice(idx, 1);
+            plSet(pls);
+            plToast('「' + pl.name + '」から削除しました', 'fa-bookmark');
+        } else {
+            pl.items.push({ ...PL_CURRENT_ITEM, ts: Date.now() });
+            plSet(pls);
+            plToast('「' + pl.name + '」に追加しました', 'fa-check');
+        }
+        plRenderList();
+        syncSavePlBtn();
+    }
+
+    function createPlaylistAndAdd() {
+        const input = document.getElementById('plNewName');
+        const name = (input.value || '').trim();
+        if (!name) { input.focus(); plToast('再生リスト名を入力してください', 'fa-exclamation-circle'); return; }
+        const pls = plGet();
+        if (pls.some(p => p.name === name)) { plToast('同じ名前の再生リストがあります', 'fa-exclamation-circle'); return; }
+        const pl = { id: Date.now().toString(), name, items: [{ ...PL_CURRENT_ITEM, ts: Date.now() }], createdAt: Date.now() };
+        pls.push(pl);
+        plSet(pls);
+        input.value = '';
+        plRenderList();
+        syncSavePlBtn();
+        plToast('「' + name + '」を作成して追加しました', 'fa-check');
+    }
+
+    // 現在の動画がいずれかの再生リストに入っていれば保存ボタンを強調
+    function syncSavePlBtn() {
+        const btn = document.getElementById('savePlBtn');
+        if (!btn) return;
+        const inAny = plGet().some(pl => (pl.items || []).some(x => x.id === PL_CURRENT_ITEM.id));
+        btn.classList.toggle('saved', inAny);
+        btn.innerHTML = inAny
+            ? '<i class="fas fa-bookmark"></i> 保存済み'
+            : '<i class="far fa-bookmark"></i> 保存';
+    }
+
+    // Enter キーで作成
+    document.getElementById('plNewName').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); createPlaylistAndAdd(); }
+    });
+    // Esc で閉じる
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closePlaylistModal();
+    });
+
+    window.openPlaylistModal = openPlaylistModal;
+    window.closePlaylistModal = closePlaylistModal;
+    window.togglePlaylistItem = togglePlaylistItem;
+    window.createPlaylistAndAdd = createPlaylistAndAdd;
+
+    syncSavePlBtn();
 </script>
 </body>
 </html>
