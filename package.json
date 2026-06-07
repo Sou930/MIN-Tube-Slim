@@ -1,6 +1,6 @@
 {
   "name": "min-tube-slim",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "MIN-Tube-Slim — Next-generation lightweight YouTube watcher & app launcher.",
   "main": "index.js",
   "scripts": {

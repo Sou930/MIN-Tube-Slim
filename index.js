@@ -810,7 +810,9 @@ app.get('/playlist', async (req, res) => {
 });
 
 // ── プレイリスト連続再生ページ (ローカルプレイリスト mt_playlists 用) ──
-// /playlist-play?pl=<plId>&i=<index>&edu=1
+// /playlist-play?pl=<plId>&i=<index>&m=<再生方法>
+//   m 例: googlevideo(既定) / youtube-nocookie / DL-Pro /
+//         YoutubeEdu-Kahoot / YoutubeEdu-Scratch / Youtube-Pro / auto
 app.get('/playlist-play', (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(`<!DOCTYPE html><html lang="ja"><head>
@@ -843,6 +845,15 @@ app.get('/playlist-play', (req, res) => {
   .ctl.on .sw{ background:var(--brand-text); }
   .sw::after{ content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:#fff; transition:left .2s; }
   .ctl.on .sw::after{ left:16px; }
+  .method-dropdown{ position:relative; display:inline-block; }
+  .method-dropdown .ctl{ border:0; }
+  .method-cur{ background:var(--brand-soft); color:var(--brand); padding:2px 8px; border-radius:10px; font-size:12px; font-weight:600; }
+  .method-menu{ position:absolute; top:calc(100% + 6px); left:0; min-width:230px; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:6px; box-shadow:0 12px 32px rgba(0,0,0,.35); z-index:50; display:none; }
+  .method-menu.show{ display:block; }
+  .method-opt{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 12px; border-radius:8px; cursor:pointer; font-size:13px; color:var(--text); }
+  .method-opt:hover{ background:var(--panel2); }
+  .method-opt.active{ background:var(--brand-soft); color:var(--brand); font-weight:600; }
+  .method-tag{ font-size:10px; background:var(--brand); color:var(--brand-text); padding:1px 7px; border-radius:8px; font-weight:700; }
   .sidebar{ width:400px; min-width:340px; background:var(--panel); border:1px solid var(--border); border-radius:14px; overflow:hidden; max-height:calc(100vh - 60px); display:flex; flex-direction:column; position:sticky; top:80px; }
   .sb-head{ padding:14px 16px; border-bottom:1px solid var(--border); }
   .sb-head .pl-name{ font-size:16px; font-weight:700; }
@@ -892,7 +903,18 @@ app.get('/playlist-play', (req, res) => {
       <div class="ctl" id="autoplayCtl" title="動画終了時に自動で次へ"><span>自動再生</span><span class="sw"></span></div>
       <div class="ctl" id="loopCtl" title="最後まで再生したら最初へ戻る"><span>ループ</span><span class="sw"></span></div>
       <div class="ctl" id="shuffleCtl" title="シャッフル再生"><span>シャッフル</span><span class="sw"></span></div>
-      <div class="ctl" id="eduCtl" title="YouTube Education モードで再生"><span>EDUモード</span><span class="sw"></span></div>
+      <div class="method-dropdown" id="methodDropdown">
+        <button class="ctl" id="methodBtn" title="再生方法を選ぶ"><span>⚙ 再生方法</span><span id="methodCur" class="method-cur">Googlevideo</span><span style="font-size:10px;">▾</span></button>
+        <div class="method-menu" id="methodMenu">
+          <div class="method-opt" data-method="googlevideo">Googlevideo<span class="method-tag">標準</span></div>
+          <div class="method-opt" data-method="youtube-nocookie">Youtube-nocookie</div>
+          <div class="method-opt" data-method="DL-Pro">DL-Pro</div>
+          <div class="method-opt" data-method="YoutubeEdu-Kahoot">YoutubeEdu-Kahoot</div>
+          <div class="method-opt" data-method="YoutubeEdu-Scratch">YoutubeEdu-Scratch</div>
+          <div class="method-opt" data-method="Youtube-Pro">Youtube-Pro</div>
+          <div class="method-opt" data-method="auto">自動 (フォールバック)</div>
+        </div>
+      </div>
       <button class="ctl" id="prevBtn">⏮ 前へ</button>
       <button class="ctl" id="nextBtn">次へ ⏭</button>
     </div>
@@ -933,7 +955,32 @@ app.get('/playlist-play', (req, res) => {
   let autoplay = localStorage.getItem('plp_autoplay') !== '0';
   let loop      = localStorage.getItem('plp_loop') === '1';
   let shuffle   = localStorage.getItem('plp_shuffle') === '1';
-  let eduMode   = localStorage.getItem('plp_edu') === '1';
+
+  // 再生方法。通常は googlevideo。
+  //   ・プレイリスト専用の設定 plp_method を優先
+  //   ・無ければ動画視聴ページと共有の playbackMode を流用
+  //   ・どちらも無ければ googlevideo
+  const METHODS = {
+    'googlevideo':        { label:'Googlevideo' },
+    'youtube-nocookie':   { label:'Youtube-nocookie' },
+    'DL-Pro':             { label:'DL-Pro' },
+    'YoutubeEdu-Kahoot':  { label:'YoutubeEdu-Kahoot' },
+    'YoutubeEdu-Scratch': { label:'YoutubeEdu-Scratch' },
+    'Youtube-Pro':        { label:'Youtube-Pro' },
+    'auto':               { label:'自動 (フォールバック)' }
+  };
+  let playMethod = params.get('m')                  // URL ?m=... が最優先
+                || localStorage.getItem('plp_method')
+                || localStorage.getItem('playbackMode')
+                || 'googlevideo';
+  if(!METHODS[playMethod]) playMethod = 'googlevideo';
+  // 旧 EDU トグル設定からの移行 (一度だけ)
+  if(!params.get('m') && !localStorage.getItem('plp_method') && localStorage.getItem('plp_edu') === '1'){
+    playMethod = 'YoutubeEdu-Scratch';
+  }
+  // EDU 系メソッドかどうか
+  function isEduMethod(m){ return m === 'YoutubeEdu-Kahoot' || m === 'YoutubeEdu-Scratch'; }
+  let eduMode = isEduMethod(playMethod);
 
   const $ = id => document.getElementById(id);
 
@@ -1012,20 +1059,44 @@ app.get('/playlist-play', (req, res) => {
     fr.src = url;
   }
 
-  // フォールバックソースの順序を定義 (EDU モードかどうかで先頭を変える)
+  // 選択された再生方法を先頭に置き、失敗時のフォールバックを後ろに並べる。
+  //  type 一覧:
+  //   googlevideo … /360/ の直リンクを <video> で再生 (ended で自動次へ)
+  //   yt          … YouTube IFrame API (ended 検知できる)
+  //   nocookie    … youtube-nocookie iframe
+  //   pro         … /pro-stream iframe
+  //   edu         … /scratch-edu iframe
+  //   kahoot      … /kahoot-edu iframe
   function buildSourceChain(id){
-    const chain = [];
     const ytApiOk = !!(window.YT && window.YT.Player);
-    if(eduMode){
-      chain.push({ type:'edu' });            // scratch-edu
-      chain.push({ type:'kahoot' });         // kahoot-edu
-      chain.push({ type:'nocookie' });       // youtube-nocookie
-      if(ytApiOk) chain.push({ type:'yt' }); // YT.Player (最終手段)
+    // 各メソッドの「本命 type」
+    const primary = {
+      'googlevideo':        'googlevideo',
+      'youtube-nocookie':   'nocookie',
+      'DL-Pro':             'googlevideo', // DL-Pro も /360/ 直リンク
+      'YoutubeEdu-Kahoot':  'kahoot',
+      'YoutubeEdu-Scratch': 'edu',
+      'Youtube-Pro':        'pro',
+      'auto':               null
+    };
+    // フォールバック全体の標準順 (本命の後に続ける)
+    const fallbackOrder = ['googlevideo', 'yt', 'nocookie', 'pro', 'edu', 'kahoot'];
+
+    const want = primary[playMethod];
+    const chain = [];
+    const seen = new Set();
+    const push = (t)=>{
+      if(!t || seen.has(t)) return;
+      if(t === 'yt' && !ytApiOk) return; // YT API 未ロードならスキップ
+      seen.add(t); chain.push({ type:t });
+    };
+
+    if(playMethod === 'auto'){
+      // 自動: YT(ended検知) を最優先に従来のフォールバック
+      push('yt'); push('googlevideo'); push('nocookie'); push('pro'); push('edu'); push('kahoot');
     } else {
-      if(ytApiOk) chain.push({ type:'yt' }); // YT.Player (ended 検知できる本命)
-      chain.push({ type:'nocookie' });       // youtube-nocookie
-      chain.push({ type:'edu' });            // scratch-edu
-      chain.push({ type:'kahoot' });         // kahoot-edu
+      push(want);                       // ユーザーが選んだ方法を最優先
+      fallbackOrder.forEach(t => push(t)); // 残りをフォールバックとして追加
     }
     return chain;
   }
@@ -1045,9 +1116,15 @@ app.get('/playlist-play', (req, res) => {
     playStarted = false;
     armPlayWatchdog(token); // 一定時間 onload/再生が無ければ次へ
 
-    if(src.type === 'yt'){
+    if(src.type === 'googlevideo'){
+      usingEdu = false;
+      await loadGooglevideo(it.id, token);
+    } else if(src.type === 'yt'){
       usingEdu = false;
       loadYt(it.id, token);
+    } else if(src.type === 'pro'){
+      usingEdu = false;
+      loadIframe('/pro-stream/'+it.id, token);
     } else if(src.type === 'nocookie'){
       usingEdu = false;
       loadIframe('https://www.youtube-nocookie.com/embed/'+it.id+'?autoplay=1&rel=0&modestbranding=1', token);
@@ -1111,7 +1188,7 @@ app.get('/playlist-play', (req, res) => {
     if(!it){ return; }
     $('nowTitle').textContent = it.title || '';
     $('nowMeta').textContent = (it.channel||'') + (it.views? ' • '+it.views : '');
-    history.replaceState(null,'','/playlist-play?pl='+encodeURIComponent(plId)+'&i='+curIndex+(eduMode?'&edu=1':''));
+    history.replaceState(null,'','/playlist-play?pl='+encodeURIComponent(plId)+'&i='+curIndex+(playMethod!=='googlevideo'?'&m='+encodeURIComponent(playMethod):''));
     renderList();
     hideNextToast();
 
@@ -1125,6 +1202,31 @@ app.get('/playlist-play', (req, res) => {
   }
 
   function destroyYt(){ if(ytPlayer){ try{ ytPlayer.destroy(); }catch(e){} ytPlayer=null; } if(endGuard){ clearInterval(endGuard); endGuard=null; } }
+
+  // googlevideo: /360/ から取得した直リンクを <video> で再生する。
+  //  ・ended で自動的に次の動画へ (onEnded)
+  //  ・取得失敗 / 再生エラー時はフォールバックチェーンへ
+  async function loadGooglevideo(id, token){
+    destroyYt();
+    let url = '';
+    try{
+      const r = await fetch('/360/'+id);
+      if(r.ok) url = (await r.text()).trim();
+    }catch(e){}
+    if(token !== curPlayToken) return;
+    if(!url || !/^https?:/.test(url)){ tryNextSource(token); return; }
+
+    const wrap = $('playerWrap');
+    wrap.innerHTML = '<video id="plVideo" controls autoplay playsinline '
+      + 'style="width:100%;height:100%;background:#000;"></video>';
+    const v = $('plVideo');
+    v.src = url;
+    v.onplaying = ()=>{ if(token===curPlayToken) playStarted = true; };
+    v.onended   = ()=>{ if(token===curPlayToken) onEnded(); };
+    v.onerror   = ()=>{ if(token===curPlayToken) tryNextSource(token); };
+    const p = v.play();
+    if(p && p.catch) p.catch(()=>{ /* 自動再生ブロック時はユーザー操作待ち */ });
+  }
 
   function loadYt(id, token){
     destroyYt();
@@ -1141,7 +1243,7 @@ app.get('/playlist-play', (req, res) => {
           if(e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.BUFFERING){
             if(token===curPlayToken) playStarted = true;
           }
-          if(e.data === YT.PlayerState.ENDED){ onEnded(); }
+          if(e.data === YT.PlayerState.ENDED){ if(token===curPlayToken) onEnded(); }
         },
         // エラー (101/150=埋め込み不可, 100=削除, 2/5=パラメータ等) → 次のソースへ
         onError: (e)=>{ if(token===curPlayToken){ tryNextSource(token); } }
@@ -1189,12 +1291,37 @@ app.get('/playlist-play', (req, res) => {
     $('autoplayCtl').classList.toggle('on', autoplay);
     $('loopCtl').classList.toggle('on', loop);
     $('shuffleCtl').classList.toggle('on', shuffle);
-    $('eduCtl').classList.toggle('on', eduMode);
+    // 再生方法 表示の同期
+    const cur = (METHODS[playMethod] || METHODS['googlevideo']).label;
+    if($('methodCur')) $('methodCur').textContent = cur;
+    document.querySelectorAll('.method-opt').forEach(opt=>{
+      opt.classList.toggle('active', opt.dataset.method === playMethod);
+    });
   }
   $('autoplayCtl').onclick=()=>{ autoplay=!autoplay; localStorage.setItem('plp_autoplay',autoplay?'1':'0'); if(!autoplay) hideNextToast(); syncCtl(); };
   $('loopCtl').onclick=()=>{ loop=!loop; localStorage.setItem('plp_loop',loop?'1':'0'); syncCtl(); };
   $('shuffleCtl').onclick=()=>{ shuffle=!shuffle; localStorage.setItem('plp_shuffle',shuffle?'1':'0'); applyShuffle(); syncCtl(); renderList(); };
-  $('eduCtl').onclick=()=>{ eduMode=!eduMode; localStorage.setItem('plp_edu',eduMode?'1':'0'); syncCtl(); playCurrent(); };
+
+  // 再生方法ドロップダウン
+  function setPlayMethod(m){
+    if(!METHODS[m] || m === playMethod){ $('methodMenu').classList.remove('show'); return; }
+    playMethod = m;
+    eduMode = isEduMethod(m);
+    localStorage.setItem('plp_method', m);
+    // 動画視聴ページと共有 (auto は共有しない)
+    if(m !== 'auto') localStorage.setItem('playbackMode', m);
+    $('methodMenu').classList.remove('show');
+    syncCtl();
+    playCurrent(); // 選んだ方法で今の動画を再生し直す
+  }
+  $('methodBtn').onclick=(e)=>{ e.stopPropagation(); $('methodMenu').classList.toggle('show'); };
+  document.querySelectorAll('.method-opt').forEach(opt=>{
+    opt.addEventListener('click', ()=> setPlayMethod(opt.dataset.method));
+  });
+  document.addEventListener('click', (e)=>{
+    if(!e.target.closest('#methodDropdown')){ $('methodMenu').classList.remove('show'); }
+  });
+
   $('prevBtn').onclick=goPrev;
   $('nextBtn').onclick=()=>{ hideNextToast(); goNext(); };
   $('ntCancel').onclick=hideNextToast;
@@ -1218,9 +1345,11 @@ app.get('/playlist-play', (req, res) => {
   // メタ情報を先に表示
   (function(){ const it=curVid(); if(it){ $('nowTitle').textContent=it.title||''; $('nowMeta').textContent=(it.channel||''); } })();
 
-  // EDU モードは YT API 不要 / API 既ロード済みなら即再生
-  if(eduMode || ytApiReady){ startedOnce = true; playCurrent(); }
-  else {
+  // 「自動」以外の方法は YT API を待つ必要がないので即再生。
+  //  「自動」かつ API 未ロードのときだけ、API 到着 or タイムアウトで起動する。
+  if(playMethod !== 'auto' || ytApiReady){
+    startedOnce = true; playCurrent();
+  } else {
     // API ロードが遅い場合に備え、一定時間で待たずに再生開始 (フォールバックで対応)
     setTimeout(()=>{ if(!startedOnce){ startedOnce = true; playCurrent(); } }, 2500);
   }
